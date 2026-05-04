@@ -2,10 +2,9 @@ import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
 const repositoryName = process.env.GITHUB_REPOSITORY?.split('/')[1];
-const base = process.env.GITHUB_ACTIONS && repositoryName ? `/${repositoryName}/` : '/';
 
-export default defineConfig({
-  base,
+export default defineConfig(({ command }) => ({
+  base: command === 'build' && process.env.GITHUB_ACTIONS && repositoryName ? `/${repositoryName}/` : '/',
   plugins: [react()],
   test: {
     environment: 'jsdom',
@@ -13,4 +12,4 @@ export default defineConfig({
     passWithNoTests: true,
     setupFiles: './tests/setup.ts',
   },
-});
+}));
