@@ -90,6 +90,24 @@ test('템플릿 재사용 흐름', async ({ page }) => {
   await expectNoFileInputs(page)
 })
 
+test('학급 명부 수동 입력 흐름', async ({ page }) => {
+  await page.goto('/app/classes')
+  await expect(page.getByRole('heading', { name: '학급 명부' })).toBeVisible()
+
+  await page.getByRole('textbox', { name: '학년', exact: true }).fill('6학년')
+  await page.getByRole('textbox', { name: '반 이름' }).fill('E2E 테스트반')
+  await page.getByRole('button', { name: '반 생성' }).click()
+  await expect(page.getByText(/반이 .*되었습니다/)).toBeVisible()
+
+  await page.getByRole('textbox', { name: '번호' }).fill('31')
+  await page.getByRole('textbox', { name: '이름', exact: true }).fill('E2E학생')
+  await page.getByRole('button', { name: '학생 추가' }).click()
+
+  await expect(page.getByText('E2E학생 학생이 등록되었습니다.')).toBeVisible()
+  await expect(page.getByRole('row', { name: /31 E2E학생 E2E학생/ })).toBeVisible()
+  await expectNoFileInputs(page)
+})
+
 test('파일 저장 제외 흐름', async ({ page }) => {
   const routes = [
     '/app/inbox',

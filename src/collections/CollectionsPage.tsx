@@ -339,9 +339,10 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={classForm.schoolYear}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setClassForm((current) => ({ ...current, schoolYear: normalize(event.currentTarget.value) }))
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
+                  setClassForm((current) => ({ ...current, schoolYear: normalize(value) }))
+                }}
                 required
               />
             </label>
@@ -349,12 +350,13 @@ export function CollectionsPage() {
               <span>학교급</span>
               <select
                 value={classForm.schoolLevel}
-                onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                  const value = event.currentTarget.value as SchoolLevel
                   setClassForm((current) => ({
                     ...current,
-                    schoolLevel: event.currentTarget.value as SchoolLevel,
+                    schoolLevel: value,
                   }))
-                }
+                }}
               >
                 {schoolLevels.map((schoolLevel) => (
                   <option key={schoolLevel} value={schoolLevel}>
@@ -371,9 +373,10 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={classForm.grade}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setClassForm((current) => ({ ...current, grade: event.currentTarget.value }))
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
+                  setClassForm((current) => ({ ...current, grade: value }))
+                }}
                 placeholder="예: 3학년"
                 required
               />
@@ -383,9 +386,10 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={classForm.className}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setClassForm((current) => ({ ...current, className: event.currentTarget.value }))
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
+                  setClassForm((current) => ({ ...current, className: value }))
+                }}
                 placeholder="예: 3-2"
                 required
               />
@@ -404,8 +408,9 @@ export function CollectionsPage() {
             <select
               value={activeClass?.id ?? ''}
               onChange={(event: ChangeEvent<HTMLSelectElement>) => {
-                setSelectedClassId(event.currentTarget.value)
-                setCollectionForm((current) => ({ ...current, classId: event.currentTarget.value }))
+                const value = event.currentTarget.value
+                setSelectedClassId(value)
+                setCollectionForm((current) => ({ ...current, classId: value }))
               }}
             >
               {classes.length === 0 ? <option value="">반을 먼저 생성해 주세요</option> : null}
@@ -426,12 +431,13 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={studentForm.studentNumber}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
                   setStudentForm((current) => ({
                     ...current,
-                    studentNumber: event.currentTarget.value,
+                    studentNumber: value,
                   }))
-                }
+                }}
                 placeholder="예: 1"
               />
             </label>
@@ -440,9 +446,10 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={studentForm.name}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setStudentForm((current) => ({ ...current, name: event.currentTarget.value }))
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
+                  setStudentForm((current) => ({ ...current, name: value }))
+                }}
                 placeholder="예: 김가온"
               />
             </label>
@@ -451,9 +458,10 @@ export function CollectionsPage() {
               <input
                 type="text"
                 value={studentForm.displayName}
-                onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                  setStudentForm((current) => ({ ...current, displayName: event.currentTarget.value }))
-                }
+                onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                  const value = event.currentTarget.value
+                  setStudentForm((current) => ({ ...current, displayName: value }))
+                }}
                 placeholder="입력 안 하면 이름 사용"
               />
             </label>
@@ -500,9 +508,10 @@ export function CollectionsPage() {
             <span>반</span>
             <select
               value={collectionForm.classId || activeClass?.id || ''}
-              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                setCollectionForm((current) => ({ ...current, classId: event.currentTarget.value }))
-              }
+              onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                const value = event.currentTarget.value
+                setCollectionForm((current) => ({ ...current, classId: value }))
+              }}
             >
               {classes.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -516,9 +525,10 @@ export function CollectionsPage() {
             <input
               type="text"
               value={collectionForm.title}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                setCollectionForm((current) => ({ ...current, title: event.currentTarget.value }))
-              }
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const value = event.currentTarget.value
+                setCollectionForm((current) => ({ ...current, title: value }))
+              }}
               placeholder="예: 5월 수합판"
             />
           </label>
@@ -527,18 +537,20 @@ export function CollectionsPage() {
             <input
               type="date"
               value={collectionForm.dueDate}
-              onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                setCollectionForm((current) => ({ ...current, dueDate: event.currentTarget.value }))
-              }
+              onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                const value = event.currentTarget.value
+                setCollectionForm((current) => ({ ...current, dueDate: value }))
+              }}
             />
           </label>
           <label className="collections-field">
             <span>연결 공문</span>
             <select
               value={collectionForm.officialDocumentTaskId}
-              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
-                setCollectionForm((current) => ({ ...current, officialDocumentTaskId: event.currentTarget.value }))
-              }
+              onChange={(event: ChangeEvent<HTMLSelectElement>) => {
+                const value = event.currentTarget.value
+                setCollectionForm((current) => ({ ...current, officialDocumentTaskId: value }))
+              }}
             >
               <option value="">연결하지 않음</option>
               {officialDocumentTasks.map((task) => (

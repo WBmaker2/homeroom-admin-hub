@@ -389,12 +389,13 @@ export function ClassesPage() {
                 <input
                   type="text"
                   value={studentForm.studentNumber}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const value = event.currentTarget.value
                     setStudentForm((current) => ({
                       ...current,
-                      studentNumber: event.currentTarget.value,
+                      studentNumber: value,
                     }))
-                  }
+                  }}
                   placeholder="예: 1"
                 />
               </label>
@@ -403,9 +404,10 @@ export function ClassesPage() {
                 <input
                   type="text"
                   value={studentForm.name}
-                  onChange={(event) =>
-                    setStudentForm((current) => ({ ...current, name: event.currentTarget.value }))
-                  }
+                  onChange={(event) => {
+                    const value = event.currentTarget.value
+                    setStudentForm((current) => ({ ...current, name: value }))
+                  }}
                   placeholder="예: 김가온"
                 />
               </label>
@@ -414,12 +416,13 @@ export function ClassesPage() {
                 <input
                   type="text"
                   value={studentForm.displayName}
-                  onChange={(event) =>
+                  onChange={(event) => {
+                    const value = event.currentTarget.value
                     setStudentForm((current) => ({
                       ...current,
-                      displayName: event.currentTarget.value,
+                      displayName: value,
                     }))
-                  }
+                  }}
                   placeholder="비워두면 이름과 동일"
                 />
               </label>

@@ -243,12 +243,13 @@ export function TaskEditor({
             <span>유형</span>
             <select
               value={locationForm.type}
-              onChange={(event) =>
+              onChange={(event) => {
+                const value = event.currentTarget.value as LocationType;
                 setLocationForm((current) => ({
                   ...current,
-                  type: event.currentTarget.value as LocationType,
+                  type: value,
                 }))
-              }
+              }}
             >
               {locationTypeOptions.map((type) => (
                 <option key={type.type} value={type.type}>
@@ -262,12 +263,13 @@ export function TaskEditor({
             <input
               type="text"
               value={locationForm.title}
-              onChange={(event) =>
+              onChange={(event) => {
+                const value = event.currentTarget.value;
                 setLocationForm((current) => ({
                   ...current,
-                  title: event.currentTarget.value,
+                  title: value,
                 }))
-              }
+              }}
               placeholder="예: 행정 포털"
             />
           </label>
@@ -276,12 +278,13 @@ export function TaskEditor({
               <input
                 type="text"
                 value={locationForm.value}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const value = event.currentTarget.value;
                   setLocationForm((current) => ({
                     ...current,
-                  value: event.target.value,
+                    value,
                   }))
-                }
+                }}
                 placeholder="값을 입력하세요"
                 required
               />
@@ -291,12 +294,13 @@ export function TaskEditor({
             <input
               type="text"
               value={locationForm.memo}
-              onChange={(event) =>
+              onChange={(event) => {
+                const value = event.currentTarget.value;
                 setLocationForm((current) => ({
                   ...current,
-                  memo: event.currentTarget.value,
+                  memo: value,
                 }))
-              }
+              }}
               placeholder="메모"
             />
           </label>
