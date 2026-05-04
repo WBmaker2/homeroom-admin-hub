@@ -1,11 +1,14 @@
 import {
   createUserWithEmailAndPassword,
+  getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
   type User,
 } from 'firebase/auth';
-import { auth } from '../firebase/client';
+import { firebaseApp } from '../firebase/client';
+
+const auth = getAuth(firebaseApp);
 
 export function observeAuth(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);

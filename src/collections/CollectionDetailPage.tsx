@@ -4,19 +4,20 @@ import type { ParsedStudent } from '../classes/rosterService'
 import {
   collectionStatusLabel,
   filterCollectionRows,
+  getStoredCollections,
   linkedTaskForCollection,
+  saveCollectionStore,
   summarizeCollection,
   toCollectionStudentRows,
-  updateCollectionOfficialDocumentInStore,
-  updateCollectionRowInStore,
-  getCollectionById,
+  updateCollectionRow,
   type CollectionWithStudents,
   type CollectionStatusFilter,
   type DemoCollectionStudent,
 } from './collectionService'
 import type { CollectionStatus, SubmissionCollection } from '../types/domain'
-import { reassignCollectionOfficialTask, resolveOfficialDocumentDrafts, saveTaskStore } from '../tasks/taskService'
+import { getTaskStore, reassignCollectionOfficialTask, saveTaskStore } from '../tasks/taskService'
 import type { TaskItem } from '../types/domain'
+import { useUserRecords } from '../firebase/useUserRecords'
 
 import './CollectionsPage.css'
 
@@ -49,34 +50,64 @@ const toDateText = (value: string | null): string => (value ? value.slice(0, 10)
 const sortByNumber = (students: DemoCollectionStudent[]): DemoCollectionStudent[] =>
   [...students].sort((left, right) => left.studentNumber - right.studentNumber)
 
+const toCollectionRecord = (
+  collection: SubmissionCollection,
+  students: DemoCollectionStudent[],
+): CollectionWithStudents => ({
+  id: collection.id,
+  collection,
+  students,
+})
+
+const upsertCollectionRecord = (
+  current: CollectionWithStudents[],
+  record: CollectionWithStudents,
+): CollectionWithStudents[] => {
+  const exists = current.some((item) => item.collection.id === record.collection.id)
+  return exists
+    ? current.map((item) => (item.collection.id === record.collection.id ? record : item))
+    : [...current, record]
+}
+
 export function CollectionDetailPage() {
   const { collectionId } = useParams<{ collectionId: string }>()
   const { state } = useLocation()
   const seededState = (state ?? {}) as DetailState
-  const [collectionVersion, setCollectionVersion] = useState(0)
-  const [taskVersion, setTaskVersion] = useState(0)
+  const {
+    error: collectionsError,
+    loading: collectionsLoading,
+    records: storedCollections,
+    setRecords: setStoredCollections,
+  } = useUserRecords<CollectionWithStudents>({
+    collectionName: 'collections',
+    getInitialRecords: getStoredCollections,
+    onSaveLocal: saveCollectionStore,
+  })
+  const {
+    error: tasksError,
+    loading: tasksLoading,
+    records: storedTasks,
+    setRecords: setStoredTasks,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
 
   const collectionRecord = useMemo<CollectionWithStudents | null>(() => {
-    if (collectionVersion > 0) {
-      // used as a store-reload trigger after row updates
-    }
-
     if (collectionId) {
-      const storeCollection = getCollectionById(collectionId)
+      const storeCollection = storedCollections.find((item) => item.collection.id === collectionId)
       if (storeCollection) {
         return storeCollection
       }
     }
 
     if (seededState.collection && seededState.collection.id === collectionId) {
-      return {
-        collection: seededState.collection,
-        students: seededState.students ?? [],
-      }
+      return toCollectionRecord(seededState.collection, seededState.students ?? [])
     }
 
     return null
-  }, [collectionId, seededState.collection, seededState.students, collectionVersion])
+  }, [collectionId, seededState.collection, seededState.students, storedCollections])
 
   const students = useMemo<DemoCollectionStudent[]>(
     () => collectionRecord?.students ?? [],
@@ -84,12 +115,9 @@ export function CollectionDetailPage() {
   )
   const tasks = useMemo<TaskItem[]>(
     () => {
-      if (taskVersion > 0) {
-        // used as a task-store reload trigger after official document relinks
-      }
-      return seededState.tasks ?? resolveOfficialDocumentDrafts()
+      return storedTasks.length > 0 ? storedTasks : (seededState.tasks ?? [])
     },
-    [seededState.tasks, taskVersion],
+    [seededState.tasks, storedTasks],
   )
   const [filter, setFilter] = useState<CollectionStatusFilter>('ALL')
 
@@ -161,20 +189,18 @@ export function CollectionDetailPage() {
     if (!collection?.id) {
       return
     }
-    const updated = updateCollectionRowInStore(collection.id, studentId, { status: nextStatus })
-    if (updated) {
-      setCollectionVersion((current) => current + 1)
-    }
+    const updatedCollection = updateCollectionRow(collection, studentId, { status: nextStatus })
+    const updated = toCollectionRecord(updatedCollection, students)
+    setStoredCollections((current) => upsertCollectionRecord(current, updated))
   }
 
   const handleMemoChange = (studentId: string, nextMemo: string) => {
     if (!collection?.id) {
       return
     }
-    const updated = updateCollectionRowInStore(collection.id, studentId, { memo: nextMemo })
-    if (updated) {
-      setCollectionVersion((current) => current + 1)
-    }
+    const updatedCollection = updateCollectionRow(collection, studentId, { memo: nextMemo })
+    const updated = toCollectionRecord(updatedCollection, students)
+    setStoredCollections((current) => upsertCollectionRecord(current, updated))
   }
 
   const handleOfficialDocumentChange = (nextOfficialDocumentTaskId: string) => {
@@ -184,22 +210,48 @@ export function CollectionDetailPage() {
 
     const currentCollectionId = collection.id
 
-    const updatedCollection = updateCollectionOfficialDocumentInStore(collection.id, nextOfficialDocumentTaskId || null)
-    if (updatedCollection) {
-      setCollectionVersion((current) => current + 1)
+    const nextCollection: SubmissionCollection = {
+      ...collection,
+      officialDocumentTaskId: nextOfficialDocumentTaskId || null,
+      updatedAt: new Date().toISOString(),
     }
-
-    setTaskVersion((current) => {
-      const next = reassignCollectionOfficialTask({
-        tasks,
+    setStoredCollections((current) => upsertCollectionRecord(current, toCollectionRecord(nextCollection, students)))
+    setStoredTasks((current) => {
+      return reassignCollectionOfficialTask({
+        tasks: current.length > 0 ? current : tasks,
         collectionId: currentCollectionId,
         currentOfficialTaskId: collection.officialDocumentTaskId,
         nextOfficialTaskId: nextOfficialDocumentTaskId || null,
       })
-
-      saveTaskStore(next)
-      return current + 1
     })
+  }
+
+  if (collectionsLoading || tasksLoading) {
+    return (
+      <main className="collections-page">
+        <section className="collections-section">
+          <h1>수합판을 불러오는 중입니다.</h1>
+          <p className="collections-message" role="status" aria-live="polite">
+            저장소에서 수합판 데이터를 확인하고 있습니다.
+          </p>
+        </section>
+      </main>
+    )
+  }
+
+  const loadError = collectionsError || tasksError
+  if (loadError) {
+    return (
+      <main className="collections-page">
+        <section className="collections-section">
+          <h1>수합판을 불러오지 못했습니다.</h1>
+          <p className="collections-message" role="alert">
+            {loadError}
+          </p>
+          <Link to="/app/collections">수합판 목록으로</Link>
+        </section>
+      </main>
+    )
   }
 
   if (!isValidCollection || !collection) {

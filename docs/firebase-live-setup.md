@@ -8,10 +8,11 @@
 - Firestore database: `(default)`, Native mode, Standard edition
 - Firestore location: `asia-northeast3` (Seoul)
 - Firestore rules/indexes: 서울 리전 재생성 후 재배포 완료
+- Firestore data sync: `classes`, `tasks`, `collections`, `templates` 화면 저장 연결 완료
 - GitHub repository variables: Firebase 웹앱 설정값 등록 완료
 - GitHub Pages mode: `VITE_APP_MODE=demo` 유지
 
-공개 GitHub Pages는 현재 데모 모드로 유지합니다. Firebase 설정값은 Actions variables에 등록되어 있으므로, Authentication 제공업체와 데이터 영속화가 준비되면 `VITE_APP_MODE=live`로 전환할 수 있습니다.
+공개 GitHub Pages는 현재 데모 모드로 유지합니다. Firebase 설정값과 Firestore 저장 경로는 준비되어 있으므로, Authentication 제공업체가 활성화되면 `VITE_APP_MODE=live`로 전환할 수 있습니다.
 
 > 참고: 최초 생성된 `nam5` DB는 실데이터 입력 전 삭제했고, `(default)` DB를 `asia-northeast3`으로 다시 생성했습니다.
 
@@ -45,6 +46,15 @@ VITE_DEMO_AUTH_USER=demo-user
 
 이 앱의 데이터 경계는 `users/{uid}` 아래입니다. Firestore rules는 로그인한 사용자가 자기 uid 문서와 하위 문서만 읽고 쓰도록 제한합니다.
 
+실사용 모드에서 화면별 저장 경로는 아래와 같습니다.
+
+```text
+users/{uid}/classes/{classId}
+users/{uid}/tasks/{taskId}
+users/{uid}/collections/{collectionId}
+users/{uid}/templates/{templateId}
+```
+
 ```bash
 npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <firebase-project-id>
 ```
@@ -56,10 +66,11 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <fi
 3. GitHub Actions variable `VITE_APP_MODE`를 `live`로 바꿉니다.
 4. 로그인 화면에서 `실사용 모드` 문구가 보이는지 확인합니다.
 5. 새 계정을 만들고 `/app/inbox`로 이동되는지 확인합니다.
-6. 잘못된 비밀번호, 약한 비밀번호, 네트워크 오류 문구가 `role="alert"`로 표시되는지 확인합니다.
+6. 학급, 업무, 수합판, 템플릿을 하나씩 저장한 뒤 새로고침 후에도 유지되는지 확인합니다.
+7. 잘못된 비밀번호, 약한 비밀번호, 네트워크 오류 문구가 `role="alert"`로 표시되는지 확인합니다.
 
 ## 현재 제한
 
 - 공개 GitHub Pages는 기본적으로 데모 모드 배포를 권장합니다.
 - Firebase Authentication 이메일/비밀번호 제공업체 활성화는 Firebase 콘솔에서 수동 확인이 필요합니다.
-- 실사용 데이터 저장소 연결은 Auth/Firestore 경계와 환경 분리까지 준비되어 있으며, 화면별 영구 Firestore 저장 동기화는 다음 단계에서 확장합니다.
+- Firebase Authentication이 아직 초기화되지 않은 상태에서는 CLI/API에서 `CONFIGURATION_NOT_FOUND`가 반환됩니다.

@@ -1,8 +1,14 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import type { ParsedStudent } from '../classes/rosterService'
 import { buildManualStudent, sortRosterStudents } from '../classes/rosterService'
-import { getDemoClassSeeds, isDemoAuthMode } from '../firebase/seedDemoData'
+import {
+  createClassId,
+  getClassStore,
+  saveClassStore,
+  type ClassRecord,
+  type SchoolLevel,
+} from '../classes/classService'
+import { useUserRecords } from '../firebase/useUserRecords'
 import {
   createStudentFromInput,
   createSubmissionCollectionWithTask,
@@ -11,7 +17,6 @@ import {
   applyCollectionDeletionPlan,
   getStoredCollections,
   saveCollectionStore,
-  upsertCollectionWithStudents,
   isCollectionCreationBlocked,
   summarizeCollection,
   type CollectionWithStudents,
@@ -23,17 +28,6 @@ import {
 } from '../tasks/taskService'
 import type { TaskItem } from '../types/domain'
 import './CollectionsPage.css'
-
-type SchoolLevel = '초등학교' | '중학교' | '고등학교' | '기타'
-
-type DemoClass = {
-  id: string
-  schoolYear: number
-  schoolLevel: SchoolLevel
-  grade: string
-  className: string
-  students: ParsedStudent[]
-}
 
 type ClassFormState = {
   schoolYear: string
@@ -56,8 +50,6 @@ type CollectionFormState = {
 }
 
 const schoolLevels: SchoolLevel[] = ['초등학교', '중학교', '고등학교', '기타']
-
-const createClassId = (): string => `class-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
 
 const createInitialClassForm = (): ClassFormState => ({
   schoolYear: String(new Date().getFullYear()),
@@ -83,26 +75,53 @@ const normalize = (value: string): string => value.trim()
 
 const toPercent = (value: number): string => `${Math.round(value * 100)}%`
 
+const upsertCollectionRecord = (
+  current: CollectionWithStudents[],
+  record: CollectionWithStudents,
+): CollectionWithStudents[] => {
+  const index = current.findIndex((entry) => entry.collection.id === record.collection.id)
+  if (index === -1) {
+    return [...current, record]
+  }
+
+  return current.map((entry) =>
+    entry.collection.id === record.collection.id ? record : entry,
+  )
+}
+
 export function CollectionsPage() {
   const [searchParams] = useSearchParams()
   const intent = searchParams.get('intent')
-  const [classes, setClasses] = useState<DemoClass[]>(() => {
-    if (isDemoAuthMode()) {
-      return getDemoClassSeeds().map((seedClass) => ({
-        id: seedClass.id,
-        schoolYear: seedClass.schoolYear,
-        schoolLevel: seedClass.schoolLevel,
-        grade: seedClass.grade,
-        className: seedClass.className,
-        students: seedClass.students.map((student) => ({
-          studentNumber: student.studentNumber,
-          name: student.name,
-          displayName: student.displayName,
-        })),
-      }))
-    }
-
-    return []
+  const {
+    error: classesError,
+    loading: classesLoading,
+    records: classes,
+    setRecords: setClasses,
+    usingFirestore,
+  } = useUserRecords<ClassRecord>({
+    collectionName: 'classes',
+    getInitialRecords: getClassStore,
+    onSaveLocal: saveClassStore,
+  })
+  const {
+    error: collectionsError,
+    loading: collectionsLoading,
+    records: collections,
+    setRecords: setCollections,
+  } = useUserRecords<CollectionWithStudents>({
+    collectionName: 'collections',
+    getInitialRecords: getStoredCollections,
+    onSaveLocal: saveCollectionStore,
+  })
+  const {
+    error: tasksError,
+    loading: tasksLoading,
+    records: tasks,
+    setRecords: setTasks,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: resolveOfficialDocumentDrafts,
+    onSaveLocal: saveTaskStore,
   })
   const [selectedClassId, setSelectedClassId] = useState('')
   const [classForm, setClassForm] = useState<ClassFormState>(createInitialClassForm())
@@ -111,8 +130,8 @@ export function CollectionsPage() {
   const [studentMessage, setStudentMessage] = useState('')
   const [collectionForm, setCollectionForm] = useState<CollectionFormState>(initialCollectionForm())
   const [collectionMessage, setCollectionMessage] = useState('')
-  const [collections, setCollections] = useState<CollectionWithStudents[]>(() => getStoredCollections())
-  const [tasks, setTasks] = useState<TaskItem[]>(() => resolveOfficialDocumentDrafts())
+  const loading = classesLoading || collectionsLoading || tasksLoading
+  const loadError = classesError || collectionsError || tasksError
 
   const activeClass = useMemo(
     () => classes.find((classRecord) => classRecord.id === selectedClassId) ?? classes[0],
@@ -146,7 +165,7 @@ export function CollectionsPage() {
       return
     }
 
-    const nextClass: DemoClass = {
+    const nextClass: ClassRecord = {
       id: createClassId(),
       schoolYear,
       schoolLevel: classForm.schoolLevel,
@@ -240,13 +259,16 @@ export function CollectionsPage() {
       const merged = withLink.find((item) => item.id === task.id)
         ? withLink
         : [...withLink, task]
-      return saveTaskStore(merged)
+      return merged
     })
 
-      setCollections(() => {
-      const next = upsertCollectionWithStudents({ collection, students })
-      return next
-    })
+    setCollections((current) =>
+      upsertCollectionRecord(current, {
+        id: collection.id,
+        collection,
+        students,
+      }),
+    )
     setCollectionMessage('수합판이 생성되었고 과제 항목도 함께 생성했습니다.')
     setCollectionForm((current) => ({ ...current, title: '', dueDate: '', officialDocumentTaskId: '' }))
   }
@@ -267,8 +289,8 @@ export function CollectionsPage() {
       plan,
       tasks,
     })
-    setTasks(saveTaskStore(result.tasks))
-    setCollections(saveCollectionStore(result.collections))
+    setTasks(result.tasks)
+    setCollections(result.collections)
     setCollectionMessage('수합판을 삭제했습니다.')
   }
 
@@ -286,8 +308,22 @@ export function CollectionsPage() {
       <section className="collections-section">
         <header className="collections-section-header">
           <h1>학급 수합판</h1>
-          <p>반 생성부터 명부 등록, 수합판 생성까지 로컬 데모 상태로 운영합니다.</p>
+          <p>
+            반 생성부터 명부 등록, 수합판 생성까지 운영합니다.
+            {usingFirestore ? ' 현재 수합판 데이터는 Firestore에 저장됩니다.' : ' 현재는 로컬 데모 상태입니다.'}
+          </p>
         </header>
+
+        {loading ? (
+          <p className="collections-inline-alert" role="status" aria-live="polite">
+            학급/수합판 데이터를 불러오는 중입니다.
+          </p>
+        ) : null}
+        {loadError ? (
+          <p className="collections-inline-alert" role="alert">
+            저장소 데이터를 불러오지 못했습니다: {loadError}
+          </p>
+        ) : null}
 
         {intentTitle ? (
           <p className="collections-inline-alert" role="status" aria-live="polite">

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { TemplateEditor, type TemplateFeedback } from './TemplateEditor'
 import * as templateService from './templateService'
 import type { TemplateItem } from '../types/domain'
 import './TemplatesPage.css'
 import { getDemoTemplates } from '../firebase/seedDemoData'
+import { useUserRecords } from '../firebase/useUserRecords'
 
 const formatLastUsedDate = (value: string | null): string => {
   if (!value) {
@@ -23,11 +24,11 @@ const formatLastUsedDate = (value: string | null): string => {
 
 const createTemplateId = (): string => `template-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
 
-const createBlankTemplate = (): TemplateItem => {
+const createBlankTemplate = (userId = 'user-demo'): TemplateItem => {
   const now = new Date().toISOString()
   return {
     id: `template-draft-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    userId: 'user-demo',
+    userId,
     title: '',
     type: 'NOTICE',
     body: '',
@@ -66,9 +67,19 @@ export function TemplatesPage() {
   const [searchParams] = useSearchParams()
   const intent = searchParams.get('intent')
   const intentCreate = intent === 'create'
+  const {
+    error,
+    loading,
+    records: templates,
+    setRecords: setTemplates,
+    userId,
+    usingFirestore,
+  } = useUserRecords<TemplateItem>({
+    collectionName: 'templates',
+    getInitialRecords: getDemoTemplates,
+  })
   const seedTemplates = getDemoTemplates()
 
-  const [templates, setTemplates] = useState<TemplateItem[]>(() => seedTemplates)
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(() =>
     intentCreate ? null : seedTemplates[0]?.id ?? null,
   )
@@ -82,6 +93,39 @@ export function TemplatesPage() {
   const [feedback, setFeedback] = useState<TemplateFeedback | null>(null)
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null
+
+  useEffect(() => {
+    if (intentCreate) {
+      return
+    }
+
+    let active = true
+
+    if (templates.length === 0) {
+      void Promise.resolve().then(() => {
+        if (!active) return
+        setIsCreateMode(true)
+        setSelectedTemplateId(null)
+        setDraftTemplate(createBlankTemplate(userId ?? 'user-demo'))
+      })
+      return () => {
+        active = false
+      }
+    }
+
+    if (!selectedTemplateId || !templates.some((template) => template.id === selectedTemplateId)) {
+      void Promise.resolve().then(() => {
+        if (!active) return
+        setIsCreateMode(false)
+        setSelectedTemplateId(templates[0].id)
+        setDraftTemplate(cloneTemplate(templates[0]))
+      })
+    }
+
+    return () => {
+      active = false
+    }
+  }, [intentCreate, selectedTemplateId, templates, userId])
 
   const previewText = templateService.interpolateTemplate(draftTemplate.body, replacementValues)
   const canCopy = Boolean(selectedTemplate)
@@ -108,7 +152,7 @@ export function TemplatesPage() {
   const handleCreateTemplate = () => {
     setIsCreateMode(true)
     setSelectedTemplateId(null)
-    setDraftTemplate(createBlankTemplate())
+    setDraftTemplate(createBlankTemplate(userId ?? 'user-demo'))
     setReplacementValues(createEmptyReplacementValues)
     setFeedback(null)
   }
@@ -131,7 +175,7 @@ export function TemplatesPage() {
       const created = {
         ...normalizedDraft,
         id: createTemplateId(),
-        userId: 'user-demo',
+        userId: userId ?? 'user-demo',
         createdAt: now,
         tags: normalizedDraft.tags.filter(Boolean),
       }
@@ -201,6 +245,21 @@ export function TemplatesPage() {
   return (
     <main className="templates-page">
       <h1>템플릿</h1>
+      {loading ? (
+        <p className="templates-empty" role="status" aria-live="polite">
+          템플릿을 불러오는 중입니다.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="templates-empty" role="alert">
+          템플릿을 불러오지 못했습니다: {error}
+        </p>
+      ) : null}
+      {usingFirestore ? (
+        <p className="templates-counseling-caution" role="note">
+          템플릿은 Firestore 사용자 문서에 저장됩니다. 상담 기록 본문이나 민감한 학생 정보는 저장하지 마세요.
+        </p>
+      ) : null}
 
       <section className="templates-list-section" aria-label="템플릿 목록">
         <div className="templates-list-header">

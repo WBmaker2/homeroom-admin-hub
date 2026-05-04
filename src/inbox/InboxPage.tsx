@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { toLocalDateString } from '../utils/dates';
 import type { SubmissionCollection, TaskItem } from '../types/domain';
 import { buildInboxSections } from './inboxService';
 import { TaskCard } from './TaskCard';
-import { getDemoInboxSeedCollections, isDemoAuthMode } from '../firebase/seedDemoData';
+import { getStoredCollections, saveCollectionStore, type CollectionWithStudents } from '../collections/collectionService';
+import { useUserRecords } from '../firebase/useUserRecords';
 import { getTaskStore, saveTaskStore } from '../tasks/taskService';
 import './InboxPage.css';
 
@@ -226,19 +227,46 @@ export function InboxView({
 }
 
 export function InboxPage(props: DemoInboxProps = {}) {
-  const demoMode = isDemoAuthMode()
+  const {
+    error: tasksError,
+    loading: tasksLoading,
+    records: storedTasks,
+    setRecords: setStoredTasks,
+    usingFirestore,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
+  const {
+    error: collectionsError,
+    loading: collectionsLoading,
+    records: storedCollectionRecords,
+  } = useUserRecords<CollectionWithStudents>({
+    collectionName: 'collections',
+    getInitialRecords: getStoredCollections,
+    onSaveLocal: saveCollectionStore,
+  })
 
   const {
     today = toLocalDateString(new Date()),
-    tasks: seededTasks = demoMode ? getTaskStore() : baseTasks,
-    collections: seededCollections = demoMode ? getDemoInboxSeedCollections() : baseCollections,
+    tasks: seededTasks,
+    collections: seededCollections,
     onComplete: seedOnComplete,
   } = props;
-  const [tasks, setTasks] = useState<TaskItem[]>(() => seededTasks);
+  const tasks = seededTasks ?? (storedTasks.length > 0 || usingFirestore ? storedTasks : baseTasks)
+  const collections =
+    seededCollections ??
+    (storedCollectionRecords.length > 0 || usingFirestore
+      ? storedCollectionRecords.map((record) => record.collection)
+      : baseCollections)
+  const loading = tasksLoading || collectionsLoading
+  const loadError = tasksError || collectionsError
 
   const completeByDefault = (taskId: string) => {
-    setTasks((current) => {
-      const nextTasks: TaskItem[] = current.map((task): TaskItem =>
+    setStoredTasks((current) => {
+      const base = current.length > 0 ? current : tasks
+      const nextTasks: TaskItem[] = base.map((task): TaskItem =>
         task.id === taskId && task.status !== 'DONE' && task.status !== 'ARCHIVED'
           ? {
               ...task,
@@ -247,10 +275,6 @@ export function InboxPage(props: DemoInboxProps = {}) {
             }
           : task,
       );
-
-      if (demoMode) {
-        return saveTaskStore(nextTasks);
-      }
 
       return nextTasks;
     });
@@ -270,11 +294,31 @@ export function InboxPage(props: DemoInboxProps = {}) {
     completeByDefault(taskId);
   };
 
+  if (loading) {
+    return (
+      <section className="inbox-view">
+        <p className="inbox-empty" role="status" aria-live="polite">
+          오늘 업무함을 불러오는 중입니다.
+        </p>
+      </section>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <section className="inbox-view">
+        <p className="inbox-empty" role="alert">
+          오늘 업무함 데이터를 불러오지 못했습니다: {loadError}
+        </p>
+      </section>
+    )
+  }
+
   return (
     <InboxView
       today={today}
       tasks={tasks}
-      collections={seededCollections}
+      collections={collections}
       onComplete={onComplete}
     />
   );

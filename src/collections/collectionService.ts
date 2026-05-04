@@ -19,6 +19,7 @@ export type CollectionSummary = {
 }
 
 export type CollectionWithStudents = {
+  id: string
   collection: SubmissionCollection
   students: DemoCollectionStudent[]
 }
@@ -408,6 +409,7 @@ const cloneCollection = (collection: SubmissionCollection): SubmissionCollection
 const cloneStudent = (student: DemoCollectionStudent): DemoCollectionStudent => ({ ...student })
 
 const cloneCollectionWithStudents = (record: CollectionWithStudents): CollectionWithStudents => ({
+  id: record.id ?? record.collection.id,
   collection: cloneCollection(record.collection),
   students: record.students.map(cloneStudent),
 })
@@ -476,6 +478,7 @@ const toDemoCollections = (): CollectionWithStudents[] => {
   const demoSeed = getDemoCollectionWithStudents();
   return [
     {
+      id: demoSeed.collection.id,
       collection: {
         ...demoSeed.collection,
         userId: DEMO_USER_ID,
@@ -651,6 +654,7 @@ export const updateCollectionRowInStore = (
   const nextCollection = updateCollectionRow(currentEntry.collection, studentId, patch)
   const updated: CollectionWithStudents = {
     ...currentEntry,
+    id: currentEntry.id ?? currentEntry.collection.id,
     collection: nextCollection,
   }
   current[currentIndex] = updated
@@ -675,6 +679,7 @@ export const updateCollectionOfficialDocumentInStore = (
 
   const updated: CollectionWithStudents = {
     ...currentEntry,
+    id: currentEntry.id ?? currentEntry.collection.id,
     collection: {
       ...currentEntry.collection,
       officialDocumentTaskId,

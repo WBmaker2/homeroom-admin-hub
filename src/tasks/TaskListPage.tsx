@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { TaskItem } from '../types/domain';
-import { buildTaskList } from './taskService';
+import { buildTaskList, getTaskStore, saveTaskStore } from './taskService';
 import { TaskCard } from '../inbox/TaskCard';
+import { useUserRecords } from '../firebase/useUserRecords';
 import './TaskListPage.css';
 
 const baseTasks: TaskItem[] = [
@@ -165,15 +166,26 @@ export function TaskListView({
 }
 
 export function TaskListPage() {
-  const [tasks, setTasks] = useState<TaskItem[]>(baseTasks);
+  const {
+    error,
+    loading,
+    records: storedTasks,
+    setRecords: setStoredTasks,
+    usingFirestore,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
+  const tasks = storedTasks.length > 0 || usingFirestore ? storedTasks : baseTasks
   const [includeArchived, setIncludeArchived] = useState(false);
   const [searchParams] = useSearchParams();
   const intent = searchParams.get('intent');
   const createType = searchParams.get('type');
 
   const handleComplete = (taskId: string) => {
-    setTasks((current) =>
-      current.map((task) =>
+    setStoredTasks((current) =>
+      (current.length > 0 ? current : tasks).map((task) =>
         task.id === taskId && task.status !== 'DONE' && task.status !== 'ARCHIVED'
           ? {
               ...task,
@@ -218,6 +230,16 @@ export function TaskListPage() {
         />
         <span>보관 포함</span>
       </label>
+      {loading ? (
+        <p className="task-list-empty" role="status" aria-live="polite">
+          업무 목록을 불러오는 중입니다.
+        </p>
+      ) : null}
+      {error ? (
+        <p className="task-list-empty" role="alert">
+          업무 목록을 불러오지 못했습니다: {error}
+        </p>
+      ) : null}
       <TaskListView tasks={tasks} includeArchived={includeArchived} onComplete={handleComplete} />
     </div>
   );

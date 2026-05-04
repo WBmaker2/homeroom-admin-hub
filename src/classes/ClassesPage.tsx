@@ -7,26 +7,25 @@ import {
   deleteClassPlan,
   getStoredCollections,
   saveCollectionStore,
+  type CollectionWithStudents,
 } from '../collections/collectionService'
+import {
+  createClassId,
+  getClassStore,
+  saveClassStore,
+  type ClassRecord,
+  type SchoolLevel,
+} from './classService'
 import {
   buildManualStudent,
   sortRosterStudents,
-  type ParsedStudent,
   type ManualStudentInput,
+  type ParsedStudent,
 } from './rosterService'
 import { getTaskStore, saveTaskStore } from '../tasks/taskService'
+import { useUserRecords } from '../firebase/useUserRecords'
+import type { TaskItem } from '../types/domain'
 import './ClassesPage.css'
-
-type SchoolLevel = '초등학교' | '중학교' | '고등학교' | '기타'
-
-type ClassRecord = {
-  id: string
-  schoolYear: number
-  schoolLevel: SchoolLevel
-  grade: string
-  className: string
-  students: ParsedStudent[]
-}
 
 type ClassFormState = {
   schoolYear: string
@@ -41,8 +40,6 @@ type FeedbackState = {
 }
 
 const schoolLevels: SchoolLevel[] = ['초등학교', '중학교', '고등학교', '기타']
-
-const createClassId = (): string => `class-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`
 
 const initialClassForm = (): ClassFormState => ({
   schoolYear: String(new Date().getFullYear()),
@@ -61,7 +58,33 @@ const normalize = (value: string): string => value.trim()
 
 export function ClassesPage() {
   const { user } = useAuth()
-  const [classes, setClasses] = useState<ClassRecord[]>([])
+  const {
+    error: classLoadError,
+    loading: classesLoading,
+    records: classes,
+    setRecords: setClasses,
+    usingFirestore,
+  } = useUserRecords<ClassRecord>({
+    collectionName: 'classes',
+    getInitialRecords: getClassStore,
+    onSaveLocal: saveClassStore,
+  })
+  const {
+    records: collections,
+    setRecords: setCollections,
+  } = useUserRecords<CollectionWithStudents>({
+    collectionName: 'collections',
+    getInitialRecords: getStoredCollections,
+    onSaveLocal: saveCollectionStore,
+  })
+  const {
+    records: tasks,
+    setRecords: setTasks,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
   const [selectedClassId, setSelectedClassId] = useState('')
   const [classForm, setClassForm] = useState<ClassFormState>(initialClassForm())
   const [classFormMessage, setClassFormMessage] = useState('')
@@ -129,7 +152,11 @@ export function ClassesPage() {
       grade: '',
       className: '',
     })
-    setClassFormMessage(`반이 생성되었습니다. (현재는 로컬 임시 저장: users/${user?.uid ?? 'anonymous'}/classes)`)
+    setClassFormMessage(
+      usingFirestore
+        ? `반이 저장되었습니다. (users/${user?.uid ?? 'anonymous'}/classes)`
+        : `반이 생성되었습니다. (현재는 로컬 임시 저장: users/${user?.uid ?? 'anonymous'}/classes)`,
+    )
   }
 
   const handleStudentAdd = (event: FormEvent<HTMLFormElement>) => {
@@ -200,28 +227,25 @@ export function ClassesPage() {
       return
     }
 
-    const latestCollections = getStoredCollections()
-    const latestTasks = getTaskStore()
-
     const plan = deleteClassPlan(
       {
         id: activeClass.id,
         students: activeClass.students,
       },
-      latestCollections.map((record) => record.collection),
-      latestTasks,
+      collections.map((record) => record.collection),
+      tasks,
     )
 
     const result = applyCollectionDeletionPlan({
-      collections: latestCollections,
+      collections,
       plan,
-      tasks: latestTasks,
+      tasks,
     })
 
     const nextClasses = classes.filter((classRecord) => classRecord.id !== activeClass.id)
-    saveCollectionStore(result.collections)
-    saveTaskStore(result.tasks)
 
+    setCollections(result.collections)
+    setTasks(result.tasks)
     setClasses(nextClasses)
     setSelectedClassId(nextClasses[0]?.id ?? '')
     setClassActionMessage({
@@ -238,10 +262,20 @@ export function ClassesPage() {
         <header>
           <h1 className="classes-page-title">학급 명부</h1>
           <p className="classes-subtitle">
-            학급 생성 후 학생 명부를 직접 입력하거나 붙여넣기로 등록합니다. 현재는 실서비스 준비 전 단계로
-            로컬 데모 상태를 사용합니다.
+            학급 생성 후 학생 명부를 직접 입력하거나 붙여넣기로 등록합니다.
+            {usingFirestore ? ' 현재 학급 명부는 Firestore에 저장됩니다.' : ' 현재는 로컬 데모 상태를 사용합니다.'}
           </p>
         </header>
+        {classesLoading ? (
+          <p className="classes-status" role="status" aria-live="polite">
+            학급 명부를 불러오는 중입니다.
+          </p>
+        ) : null}
+        {classLoadError ? (
+          <p className="classes-status" role="alert">
+            학급 명부를 불러오지 못했습니다: {classLoadError}
+          </p>
+        ) : null}
 
         <form className="classes-class-form" onSubmit={handleCreateClass}>
           <h2 className="classes-section-title">반 생성</h2>
@@ -335,7 +369,7 @@ export function ClassesPage() {
               </button>
             </div>
             <p className="classes-save-note">
-              저장 경로(미적용): users/{user?.uid ?? 'anonymous'}/classes
+              저장 경로: {usingFirestore ? `users/${user?.uid ?? 'anonymous'}/classes` : '브라우저 로컬 데모 저장소'}
             </p>
             <p className="classes-warning" role={classActionMessage.kind} aria-live="polite">
               {CLASS_DELETE_WARNING}

@@ -14,6 +14,7 @@
 - 반복 템플릿(안내문·보고 문구) 작성/저장/미리보기
 - 마감 캘린더 및 간단 보관 목록
 - 공문-수합판 연결 로직
+- 실사용 모드에서 `users/{uid}` 아래 학급/업무/수합판/템플릿 Firestore 저장
 - E2E 데모 모드에서 실제 Firebase 인증 없이 기본 시연 흐름 확인
 
 ## 첫 버전 제외 범위
@@ -45,6 +46,9 @@ VITE_DEMO_AUTH_USER=demo-user
 GitHub Pages workflow는 repository variables를 읽어 빌드합니다. 실사용 모드로 전환하려면 repo variables에
 `VITE_APP_MODE=live`와 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
 `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`를 등록합니다.
+
+현재 Firebase 프로젝트는 `homeroom-admin-hub-wbmaker2`, Firestore 리전은 `asia-northeast3`(Seoul)입니다.
+Authentication Email/Password 제공업체를 콘솔에서 활성화한 뒤 `VITE_APP_MODE=live`로 전환합니다.
 
 자세한 실사용 연결 순서는 [Firebase 실사용 연결 체크리스트](docs/firebase-live-setup.md)를 참고합니다.
 

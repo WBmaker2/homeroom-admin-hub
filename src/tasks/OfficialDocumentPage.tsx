@@ -9,8 +9,10 @@ import {
   applyCollectionDeletionPlan,
   getStoredCollections,
   saveCollectionStore,
+  type CollectionWithStudents,
 } from '../collections/collectionService'
 import {
+  createOfficialDocumentDraft,
   resolveOfficialDocumentDraft,
   setOfficialDocumentStatus,
   updateOfficialDocumentDraft,
@@ -18,6 +20,7 @@ import {
   saveTaskStore,
 } from './taskService'
 import type { TaskItem } from '../types/domain'
+import { useUserRecords } from '../firebase/useUserRecords'
 import './OfficialDocumentPage.css'
 
 type StatusLabelMap = {
@@ -25,7 +28,6 @@ type StatusLabelMap = {
 }
 
 type OfficialPageProps = {
-  seedTask: TaskItem
   taskId: string | undefined
 }
 
@@ -39,23 +41,48 @@ const statusLabel: StatusLabelMap = {
 
 export function OfficialDocumentPage() {
   const { taskId } = useParams<{ taskId: string }>()
-  const seedTask = useMemo(() => {
-    const tasks = getTaskStore()
-    return (
-      tasks.find((task) => task.id === taskId?.trim()) ??
-      resolveOfficialDocumentDraft(taskId ? taskId.trim() : undefined)
-    )
-  }, [taskId])
 
-  return <OfficialDocumentPageInner key={seedTask.id} taskId={taskId} seedTask={seedTask} />
+  return <OfficialDocumentPageInner key={taskId ?? 'new'} taskId={taskId} />
 }
 
-function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
-  const [tasks, setTasks] = useState(() => getTaskStore())
-  const [task, setTask] = useState<TaskItem>(seedTask)
+function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
+  const {
+    error: tasksError,
+    loading: tasksLoading,
+    records: tasks,
+    setRecords: setTasks,
+    usingFirestore,
+  } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
+  const {
+    error: collectionsError,
+    records: collections,
+    setRecords: setCollections,
+  } = useUserRecords<CollectionWithStudents>({
+    collectionName: 'collections',
+    getInitialRecords: getStoredCollections,
+    onSaveLocal: saveCollectionStore,
+  })
+  const [draftTask, setDraftTask] = useState<TaskItem | null>(null)
   const [documentType, setDocumentType] = useState('공문')
-  const [statusInfo, setStatusInfo] = useState(`현재 상태: ${statusLabel[seedTask.status]}`)
+  const [statusInfo, setStatusInfo] = useState('')
   const navigate = useNavigate()
+  const normalizedTaskId = taskId?.trim()
+
+  const task = useMemo(() => {
+    if (normalizedTaskId) {
+      return (
+        tasks.find((item) => item.id === normalizedTaskId) ??
+        draftTask ??
+        resolveOfficialDocumentDraft(normalizedTaskId)
+      )
+    }
+
+    return draftTask ?? createOfficialDocumentDraft()
+  }, [draftTask, normalizedTaskId, tasks])
 
   const isLocalDemoTask = taskId
     ? !tasks.some((item) => item.id === task.id)
@@ -69,8 +96,8 @@ function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
       ? tasks.map((item) => (item.id === updated.id ? updated : item))
       : [...tasks, updated]
 
-    setTask(updated)
-    setTasks(saveTaskStore(nextTasks))
+    setDraftTask(updated)
+    setTasks(nextTasks)
 
     setStatusInfo(
       updated.status === 'DONE'
@@ -85,8 +112,8 @@ function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
       return
     }
 
-    const latestCollections = getStoredCollections()
-    const latestTasks = getTaskStore()
+    const latestCollections = collections
+    const latestTasks = tasks
     const latestTask = latestTasks.find((item) => item.id === task.id) ?? task
     const latestCollectionRecords = latestCollections.map((record) => record.collection)
 
@@ -111,20 +138,50 @@ function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
       plan,
       tasks: nextTaskSet,
     })
-    saveCollectionStore(result.collections)
-    const nextTasks = saveTaskStore(result.tasks)
+    setCollections(result.collections)
+    setTasks(result.tasks)
 
-    setTasks(nextTasks)
-    setTask(latestTask)
+    setDraftTask(latestTask)
     navigate('/app/inbox')
     setStatusInfo('공문 삭제가 완료되었습니다.')
   }
 
   const urgentHint = task.status === 'DONE' ? (
     <p className="official-document-urgent-note" role="status" aria-live="polite">
-      완료로 변경되어 오늘 업무함 긴급 항목에서 사라집니다. (현재 화면은 로컬 데모 임시 저장)
+      완료로 변경되어 오늘 업무함 긴급 항목에서 사라집니다.
+      {usingFirestore ? ' Firestore에 반영되었습니다.' : ' (현재 화면은 로컬 데모 임시 저장)'}
     </p>
   ) : null
+
+  if (tasksLoading) {
+    return (
+      <main className="official-document-page">
+        <section className="official-document-headline">
+          <h1>공문을 불러오는 중입니다.</h1>
+          <p className="official-document-description" role="status" aria-live="polite">
+            저장소에서 업무 항목을 확인하고 있습니다.
+          </p>
+        </section>
+      </main>
+    )
+  }
+
+  const loadError = tasksError || collectionsError
+  if (loadError) {
+    return (
+      <main className="official-document-page">
+        <section className="official-document-headline">
+          <h1>공문을 불러오지 못했습니다.</h1>
+          <p className="official-document-description" role="alert">
+            {loadError}
+          </p>
+          <Link to="/app/inbox" className="official-document-action-link">
+            오늘 업무함으로 이동
+          </Link>
+        </section>
+      </main>
+    )
+  }
 
   return (
     <main className="official-document-page">
@@ -148,7 +205,7 @@ function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
       />
 
       <section className="official-document-statusline" role="status" aria-live="polite">
-        <p>{statusInfo}</p>
+        <p>{statusInfo || `현재 상태: ${statusLabel[task.status]}`}</p>
       </section>
 
       {urgentHint}
@@ -162,9 +219,8 @@ function OfficialDocumentPageInner({ seedTask, taskId }: OfficialPageProps) {
           className="official-document-action-link"
           onClick={() => {
             const next = resolveOfficialDocumentDraft(undefined)
-            setTask(next)
+            setDraftTask(next)
             setDocumentType('공문')
-            setTasks(getTaskStore())
             setStatusInfo('새로운 데모 초안으로 초기화했습니다.')
           }}
         >
