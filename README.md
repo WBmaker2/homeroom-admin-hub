@@ -28,17 +28,25 @@
 `.env.local` 또는 실행 시 환경 변수로 설정합니다.
 
 ```bash
+VITE_APP_MODE=live
 VITE_FIREBASE_API_KEY=...
 VITE_FIREBASE_AUTH_DOMAIN=...
 VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-E2E 데모 실행 시에는 실제 인증 없이 로컬 데모 모드로 동작하도록 아래 값을 사용합니다.
+공개 GitHub Pages 데모는 실제 인증 없이 데모 데이터로 동작하도록 아래 값을 사용합니다.
 
 ```bash
+VITE_APP_MODE=demo
 VITE_DEMO_AUTH_USER=demo-user
 ```
+
+GitHub Pages workflow는 repository variables를 읽어 빌드합니다. 실사용 모드로 전환하려면 repo variables에
+`VITE_APP_MODE=live`와 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
+`VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`를 등록합니다.
+
+자세한 실사용 연결 순서는 [Firebase 실사용 연결 체크리스트](docs/firebase-live-setup.md)를 참고합니다.
 
 ## 로컬 실행
 

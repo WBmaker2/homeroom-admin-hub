@@ -3,6 +3,7 @@ import { type FormEvent } from 'react';
 import { FirebaseError } from 'firebase/app';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { getRuntimeModeDescription, getRuntimeModeLabel, isDemoAuthMode } from '../firebase/environment';
 
 type AuthError = {
   message?: string;
@@ -63,6 +64,9 @@ function LoadingMessage() {
 export function LoginPage() {
   const navigate = useNavigate();
   const { user, loading, signIn, createAccount } = useAuth();
+  const runtimeModeLabel = getRuntimeModeLabel();
+  const runtimeModeDescription = getRuntimeModeDescription();
+  const demoMode = isDemoAuthMode();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -175,9 +179,28 @@ export function LoginPage() {
           color: var(--color-danger);
           font-size: 14px;
         }
+        .auth-mode-note {
+          margin: 0;
+          border: 1px solid ${demoMode ? 'rgba(178, 121, 0, 0.25)' : 'rgba(27, 97, 201, 0.2)'};
+          background: ${demoMode ? 'rgba(255, 193, 7, 0.13)' : 'rgba(27, 97, 201, 0.08)'};
+          color: var(--color-muted);
+          border-radius: var(--radius-control);
+          padding: 10px;
+          font-size: 13px;
+          line-height: 1.45;
+        }
+        .auth-mode-note strong {
+          display: block;
+          color: var(--color-foreground);
+          margin-bottom: 3px;
+        }
       `}</style>
       <section className="auth-card">
         <h1>로그인</h1>
+        <p className="auth-mode-note" role="note">
+          <strong>{runtimeModeLabel}</strong>
+          {runtimeModeDescription}
+        </p>
         <form onSubmit={handleSignIn} noValidate>
           <div className="auth-field-group">
             <label htmlFor="email">이메일</label>

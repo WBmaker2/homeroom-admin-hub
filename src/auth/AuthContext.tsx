@@ -8,7 +8,7 @@ import {
   useState,
 } from 'react';
 import { type User } from 'firebase/auth';
-import { DEMO_USER_ID, isDemoAuthMode } from '../firebase/seedDemoData';
+import { DEMO_USER_ID, isDemoAuthMode } from '../firebase/environment';
 
 type AuthResult = Promise<{ user: User }>;
 

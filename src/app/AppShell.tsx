@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import { CalendarDays, ClipboardCheck, Copy, FileText, Inbox, ListChecks, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { getRuntimeModeDescription, getRuntimeModeLabel, isDemoAuthMode } from '../firebase/environment';
 
 type AppShellProps = {
   children: ReactNode;
@@ -54,6 +55,9 @@ const navItems = [
 
 export function AppShell({ children }: AppShellProps) {
   const { signOut } = useAuth();
+  const runtimeModeLabel = getRuntimeModeLabel();
+  const runtimeModeDescription = getRuntimeModeDescription();
+  const demoMode = isDemoAuthMode();
 
   const handleSignOut = async () => {
     await signOut();
@@ -91,6 +95,21 @@ export function AppShell({ children }: AppShellProps) {
           border: 1px solid var(--color-border);
           border-radius: var(--radius-control);
           padding: 10px;
+        }
+        .app-shell-mode-note {
+          margin: 0 0 12px;
+          color: ${demoMode ? 'var(--color-warning-foreground, #6f4b00)' : 'var(--color-accent)'};
+          background: ${demoMode ? 'rgba(255, 193, 7, 0.13)' : 'rgba(27, 97, 201, 0.08)'};
+          border: 1px solid ${demoMode ? 'rgba(178, 121, 0, 0.25)' : 'rgba(27, 97, 201, 0.18)'};
+          border-radius: var(--radius-control);
+          padding: 10px;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+        .app-shell-mode-note strong {
+          display: block;
+          color: var(--color-foreground);
+          margin-bottom: 3px;
         }
         .app-shell-nav {
           display: flex;
@@ -218,6 +237,10 @@ export function AppShell({ children }: AppShellProps) {
           </div>
         </aside>
         <main className="app-shell-main">
+          <p className="app-shell-mode-note" role="note">
+            <strong>{runtimeModeLabel}</strong>
+            {runtimeModeDescription}
+          </p>
           <p className="app-shell-privacy-notice" role="note">
             이 앱은 개인용 담임 행정 정리 도구입니다. 공문 원본 파일, 학생 사진, 실제 상담 기록, 생활지도 사건 기록은 저장하지 마세요.
           </p>
