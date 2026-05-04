@@ -1,0 +1,133 @@
+.template-editor {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  padding: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.template-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.template-editor-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.template-editor-form {
+  display: grid;
+  gap: 12px;
+}
+
+.template-editor-field,
+.template-editor-replacement-field,
+.template-editor-fieldset {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.template-editor-field span {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.template-editor-field input,
+.template-editor-field select,
+.template-editor-field textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 8px;
+  background: #ffffff;
+  width: 100%;
+}
+
+.template-editor-field textarea,
+.template-editor-preview {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.template-editor-body,
+.template-editor-preview,
+.template-editor-replacements {
+  width: 100%;
+}
+
+.template-editor-preview {
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: #f8fafc;
+  padding: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.template-editor-replacements {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px 10px;
+}
+
+.template-editor-warning {
+  margin: 0;
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  background: rgba(234, 179, 8, 0.12);
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  color: #b7791f;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.template-editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template-editor-save,
+.template-editor-copy {
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  background: var(--color-accent);
+  color: #ffffff;
+  width: fit-content;
+}
+
+.template-editor-save[disabled],
+.template-editor-copy[disabled] {
+  opacity: 0.5;
+}
+
+.template-editor-feedback {
+  margin: 0;
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  color: var(--color-muted);
+}
+
+.template-editor-feedback-status {
+  border: 1px solid rgba(23, 163, 74, 0.34);
+  background: rgba(23, 163, 74, 0.12);
+  color: #166534;
+}
+
+.template-editor-feedback-alert {
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  background: rgba(220, 38, 38, 0.1);
+  color: #991b1b;
+}
+
+@media (max-width: 860px) {
+  .template-editor-fieldset {
+    gap: 8px;
+  }
+}

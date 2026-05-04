@@ -1,0 +1,52 @@
+.inbox-view {
+  display: grid;
+  gap: 14px;
+}
+
+.inbox-page-title {
+  margin: 0;
+  font-size: 24px;
+}
+
+.inbox-quick-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inbox-quick-action {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 9px 12px;
+  color: #1b61c9;
+  text-decoration: none;
+  background: var(--color-surface);
+}
+
+.inbox-sections {
+  display: grid;
+  gap: 12px;
+}
+
+.inbox-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  padding: 10px 12px;
+}
+
+.inbox-section-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+}
+
+.inbox-section-list {
+  display: grid;
+  gap: 10px;
+}
+
+.inbox-empty {
+  margin: 12px 0;
+  color: var(--color-muted);
+}

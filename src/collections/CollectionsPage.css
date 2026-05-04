@@ -1,0 +1,227 @@
+.collections-page {
+  display: grid;
+  gap: 10px;
+}
+
+.collections-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.collections-section h1,
+.collections-section h2,
+.collections-section h3 {
+  margin: 0;
+}
+
+.collections-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.collections-section p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.collections-inline-alert,
+.collections-message {
+  margin: 0;
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  background: rgba(27, 97, 201, 0.06);
+  border: 1px solid rgba(27, 97, 201, 0.2);
+}
+
+.collections-warning {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.collections-form {
+  display: grid;
+  gap: 10px;
+}
+
+.collections-form-row,
+.collections-toolbar {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: end;
+}
+
+.collections-field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.collections-field span {
+  color: var(--color-muted);
+}
+
+.collections-field input,
+.collections-field select,
+.collections-field textarea,
+.collections-table select,
+.collections-table textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: #ffffff;
+  padding: 8px;
+}
+
+.collections-form button,
+.collections-filter-group button,
+.collections-table-link {
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  padding: 8px 10px;
+  background: var(--color-accent);
+  color: #ffffff;
+  text-decoration: none;
+  text-align: center;
+  width: fit-content;
+  height: fit-content;
+}
+
+.collections-form button {
+  border: 1px solid var(--color-accent);
+}
+
+.collections-form button:disabled {
+  opacity: 0.6;
+}
+
+.collections-table-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  overflow-x: auto;
+}
+
+.collections-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+}
+
+.collections-table th,
+.collections-table td {
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+  padding: 8px;
+  vertical-align: top;
+  font-size: 14px;
+}
+
+.collections-table th {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.collections-table thead th {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.collections-empty {
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.collections-table textarea {
+  width: 100%;
+  min-width: 140px;
+  resize: vertical;
+}
+
+.collections-table-link {
+  display: inline-block;
+}
+
+.collections-table-action {
+  border: 1px solid #dc2626;
+  border-radius: var(--radius-control);
+  padding: 6px 10px;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.collections-meta-link-spacer {
+  color: var(--color-muted);
+  padding: 0 4px;
+}
+
+.collections-quick-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.collections-detail-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.collections-detail-summary-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  padding: 8px;
+  background: #f8fafc;
+}
+
+.collections-detail-summary-item p {
+  margin: 0 0 4px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.collections-detail-summary-item strong {
+  font-size: 20px;
+}
+
+.collections-detail-meta {
+  display: grid;
+  gap: 8px;
+}
+
+.collections-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.collections-filter-group button {
+  cursor: pointer;
+  background: #fff;
+  color: var(--color-accent);
+}
+
+.collections-filter-group button.collections-filter-active {
+  background: var(--color-accent);
+  color: #ffffff;
+}
+
+.collections-wide-table {
+  min-width: 960px;
+}
+
+@media (max-width: 860px) {
+  .collections-form-row,
+  .collections-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .collections-wide-table {
+    min-width: 760px;
+  }
+}

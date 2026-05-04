@@ -1,0 +1,357 @@
+import { useMemo, useState, type ChangeEvent } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import type { ParsedStudent } from '../classes/rosterService'
+import {
+  collectionStatusLabel,
+  filterCollectionRows,
+  linkedTaskForCollection,
+  summarizeCollection,
+  toCollectionStudentRows,
+  updateCollectionOfficialDocumentInStore,
+  updateCollectionRowInStore,
+  getCollectionById,
+  type CollectionWithStudents,
+  type CollectionStatusFilter,
+  type DemoCollectionStudent,
+} from './collectionService'
+import type { CollectionStatus, SubmissionCollection } from '../types/domain'
+import { reassignCollectionOfficialTask, resolveOfficialDocumentDrafts, saveTaskStore } from '../tasks/taskService'
+import type { TaskItem } from '../types/domain'
+
+import './CollectionsPage.css'
+
+type DemoClass = {
+  id: string
+  students: ParsedStudent[]
+  schoolYear: number
+  schoolLevel: string
+  grade: string
+  className: string
+}
+
+type DetailState = {
+  collection?: SubmissionCollection
+  students?: DemoCollectionStudent[]
+  classes?: DemoClass[]
+  tasks?: TaskItem[]
+}
+
+const statusOptions = ['MISSING', 'SUBMITTED', 'NEEDS_REVISION', 'NOT_APPLICABLE'] as const
+
+const statusFilterOptions: { value: CollectionStatusFilter; label: string }[] = [
+  { value: 'ALL', label: '전체' },
+  { value: 'MISSING_ONLY', label: '미제출만' },
+  { value: 'NEEDS_REVISION_ONLY', label: '보완 필요' },
+]
+
+const toDateText = (value: string | null): string => (value ? value.slice(0, 10) : '-')
+
+const sortByNumber = (students: DemoCollectionStudent[]): DemoCollectionStudent[] =>
+  [...students].sort((left, right) => left.studentNumber - right.studentNumber)
+
+export function CollectionDetailPage() {
+  const { collectionId } = useParams<{ collectionId: string }>()
+  const { state } = useLocation()
+  const seededState = (state ?? {}) as DetailState
+  const [collectionVersion, setCollectionVersion] = useState(0)
+  const [taskVersion, setTaskVersion] = useState(0)
+
+  const collectionRecord = useMemo<CollectionWithStudents | null>(() => {
+    if (collectionVersion > 0) {
+      // used as a store-reload trigger after row updates
+    }
+
+    if (collectionId) {
+      const storeCollection = getCollectionById(collectionId)
+      if (storeCollection) {
+        return storeCollection
+      }
+    }
+
+    if (seededState.collection && seededState.collection.id === collectionId) {
+      return {
+        collection: seededState.collection,
+        students: seededState.students ?? [],
+      }
+    }
+
+    return null
+  }, [collectionId, seededState.collection, seededState.students, collectionVersion])
+
+  const students = useMemo<DemoCollectionStudent[]>(
+    () => collectionRecord?.students ?? [],
+    [collectionRecord?.students],
+  )
+  const tasks = useMemo<TaskItem[]>(
+    () => {
+      if (taskVersion > 0) {
+        // used as a task-store reload trigger after official document relinks
+      }
+      return seededState.tasks ?? resolveOfficialDocumentDrafts()
+    },
+    [seededState.tasks, taskVersion],
+  )
+  const [filter, setFilter] = useState<CollectionStatusFilter>('ALL')
+
+  const currentCollectionId = collectionRecord?.collection.id ?? ''
+  const isValidCollection = Boolean(collectionRecord && collectionRecord.collection.id === collectionId)
+  const collection = collectionRecord?.collection
+
+  const classLabel = useMemo(() => {
+    const classes = seededState.classes ?? []
+    const collection = collectionRecord?.collection
+    if (!collection) {
+      return ''
+    }
+    const match = classes.find((item) => item.id === collection.classId)
+    if (!match) {
+      return collection.classId
+    }
+    return `${match.schoolYear} ${match.schoolLevel} ${match.grade} ${match.className}`
+  }, [collectionRecord, seededState.classes])
+
+  const allRows = useMemo(() => {
+    if (!collection) {
+      return []
+    }
+    const rows = toCollectionStudentRows(sortByNumber(students), collection.rows)
+    return rows
+  }, [students, collection])
+
+  const filteredRows = useMemo(() => {
+    const baseRows = allRows
+      .map((entry) => entry.row)
+      .map((row) => ({ ...row }))
+
+    const visibleRows = filterCollectionRows(baseRows, filter)
+    const rowByStudentId = new Map(visibleRows.map((row) => [row.studentId, row]))
+
+    return allRows.filter((entry) => rowByStudentId.has(entry.row.studentId))
+  }, [allRows, filter])
+
+  const summary = useMemo(() => {
+    if (!collection) {
+      return {
+        completionRate: 1,
+        missingCount: 0,
+        needsRevisionCount: 0,
+        notApplicableCount: 0,
+        totalCount: 0,
+      }
+    }
+
+    return summarizeCollection(collection)
+  }, [collection])
+
+  const linkedTask = useMemo(() => {
+    if (!collection) {
+      return null
+    }
+    return linkedTaskForCollection(tasks, collection.taskId)
+  }, [collection, tasks])
+
+  const officialDocuments = useMemo(
+    () => tasks.filter((task) => task.type === 'OFFICIAL_DOCUMENT'),
+    [tasks],
+  )
+
+  const selectedOfficialDocumentId = collection?.officialDocumentTaskId ?? ''
+
+  const handleStatusChange = (studentId: string, nextStatus: CollectionStatus) => {
+    if (!collection?.id) {
+      return
+    }
+    const updated = updateCollectionRowInStore(collection.id, studentId, { status: nextStatus })
+    if (updated) {
+      setCollectionVersion((current) => current + 1)
+    }
+  }
+
+  const handleMemoChange = (studentId: string, nextMemo: string) => {
+    if (!collection?.id) {
+      return
+    }
+    const updated = updateCollectionRowInStore(collection.id, studentId, { memo: nextMemo })
+    if (updated) {
+      setCollectionVersion((current) => current + 1)
+    }
+  }
+
+  const handleOfficialDocumentChange = (nextOfficialDocumentTaskId: string) => {
+    if (!collection) {
+      return
+    }
+
+    const currentCollectionId = collection.id
+
+    const updatedCollection = updateCollectionOfficialDocumentInStore(collection.id, nextOfficialDocumentTaskId || null)
+    if (updatedCollection) {
+      setCollectionVersion((current) => current + 1)
+    }
+
+    setTaskVersion((current) => {
+      const next = reassignCollectionOfficialTask({
+        tasks,
+        collectionId: currentCollectionId,
+        currentOfficialTaskId: collection.officialDocumentTaskId,
+        nextOfficialTaskId: nextOfficialDocumentTaskId || null,
+      })
+
+      saveTaskStore(next)
+      return current + 1
+    })
+  }
+
+  if (!isValidCollection || !collection) {
+    return (
+      <main className="collections-page">
+        <section className="collections-section">
+          <h1>수합판을 찾을 수 없습니다.</h1>
+          <p className="collections-message">
+            목록에서 수합판을 열어 진입해 주세요.
+          </p>
+          <Link to="/app/collections">수합판 목록으로</Link>
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <main className="collections-page">
+      <section className="collections-section">
+        <header className="collections-section-header">
+          <h1>{collection.title}</h1>
+          <p>
+            반: {classLabel || collection.classId} / 마감일: {collection.dueDate ?? '-'}
+          </p>
+        </header>
+
+        <div className="collections-detail-summary">
+          <div className="collections-detail-summary-item">
+            <p>완료율</p>
+            <strong>{Math.round(summary.completionRate * 100)}%</strong>
+          </div>
+          <div className="collections-detail-summary-item">
+            <p>미제출 인원</p>
+            <strong>{summary.missingCount}</strong>
+          </div>
+          <div className="collections-detail-summary-item">
+            <p>보완 필요 인원</p>
+            <strong>{summary.needsRevisionCount}</strong>
+          </div>
+          <div className="collections-detail-summary-item">
+            <p>해당 없음 인원</p>
+            <strong>{summary.notApplicableCount}</strong>
+          </div>
+        </div>
+
+        <div className="collections-detail-meta">
+          <Link to="/app/collections">수합판 목록</Link>
+          <p>
+            연결 과제: {linkedTask ? linkedTask.title : '연결 과제 없음'} ({collection.taskId})
+          </p>
+          <label className="collections-field">
+            <span>연결 공문</span>
+            <select
+              value={selectedOfficialDocumentId}
+              onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                handleOfficialDocumentChange(event.currentTarget.value)
+              }
+            >
+              <option value="">연결 공문 없음</option>
+              {officialDocuments.map((task) => (
+                <option key={task.id} value={task.id}>
+                  {task.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section className="collections-section">
+        <div className="collections-toolbar">
+          <p>제출 상태 필터</p>
+          <div
+            className="collections-filter-group"
+            role="radiogroup"
+            aria-label="제출 상태 필터"
+          >
+            {statusFilterOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={option.value === filter ? 'collections-filter-active' : ''}
+                aria-pressed={option.value === filter}
+                onClick={() => setFilter(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="collections-table-wrap">
+          <table className="collections-table collections-wide-table">
+            <thead>
+              <tr>
+                <th scope="col">번호</th>
+                <th scope="col">이름</th>
+                <th scope="col">제출 상태</th>
+                <th scope="col">제출일</th>
+                <th scope="col">메모</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.map((entry) => (
+                <tr key={entry.studentId}>
+                  <td>{entry.studentNumber}</td>
+                  <td>{entry.name}</td>
+                  <td>
+                    <select
+                      value={entry.row.status}
+                      aria-label={`${entry.name}(${entry.studentNumber}) 제출 상태 선택`}
+                      onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+                        handleStatusChange(entry.studentId, event.currentTarget.value as CollectionStatus)
+                      }
+                    >
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {collectionStatusLabel[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>{toDateText(entry.row.submittedAt)}</td>
+                  <td>
+                    <textarea
+                      value={entry.row.memo}
+                      aria-label={`${entry.name}(${entry.studentNumber}) 메모 입력`}
+                      onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+                        handleMemoChange(entry.studentId, event.currentTarget.value)
+                      }
+                      rows={2}
+                    />
+                  </td>
+                </tr>
+              ))}
+              {filteredRows.length === 0 ? (
+                <tr>
+                  <td className="collections-empty" colSpan={5}>
+                    표시할 학생이 없습니다.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <p className="collections-inline-alert" role="status" aria-live="polite">
+        현재 수합판 ID: {currentCollectionId}
+      </p>
+    </main>
+  )
+}
+
+export default CollectionDetailPage

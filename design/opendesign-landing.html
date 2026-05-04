@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>담임 행정 허브</title>
+    <meta
+      name="description"
+      content="오늘 처리할 담임 행정 업무를 한 화면에서 관리하는 담임 행정 허브 랜딩 페이지"
+    />
+    <style>
+      :root {
+        --color-background: #fafafa;
+        --color-surface: #ffffff;
+        --color-foreground: #181d26;
+        --color-muted: rgba(4, 14, 32, 0.69);
+        --color-border: #e0e2e6;
+        --color-accent: #1b61c9;
+        --color-success: #17a34a;
+        --color-warn: #eab308;
+        --color-danger: #dc2626;
+        --radius-panel: 8px;
+        --radius-control: 8px;
+        --font-stack: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        --space-page: clamp(16px, 4vw, 40px);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--color-background);
+        color: var(--color-foreground);
+        font-family: var(--font-stack);
+        line-height: 1.5;
+      }
+
+      .page {
+        padding: clamp(16px, 2.2vw, 36px) var(--space-page) 56px;
+      }
+
+      .frame {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+      }
+
+      .wordmark {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 20px 12px;
+      }
+
+      .nav a {
+        font-size: 14px;
+        color: var(--color-muted);
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 36px;
+        align-items: center;
+        padding: 24px 0 80px;
+      }
+
+      .hero-copy {
+        grid-column: span 6;
+        display: grid;
+        gap: 20px;
+      }
+
+      .headline {
+        margin: 0;
+        font-size: clamp(30px, 4vw, 52px);
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      .subhead {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 18px;
+        max-width: 52ch;
+      }
+
+      .cta-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 44px;
+        padding: 0 20px;
+        border-radius: var(--radius-control);
+        font-size: 16px;
+        text-decoration: none;
+        border: 1px solid var(--color-border);
+        transition: transform 0.2s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+
+      .btn-primary {
+        color: #fff;
+        background: var(--color-accent);
+        border-color: var(--color-accent);
+      }
+
+      .btn-secondary {
+        color: var(--color-foreground);
+        background: #fff;
+      }
+
+      .hero-preview {
+        grid-column: span 6;
+        display: grid;
+        gap: 14px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-panel);
+        padding: 18px;
+      }
+
+      .preview-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .preview-summary {
+        display: grid;
+        gap: 10px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: fit-content;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(27, 97, 201, 0.1);
+        color: var(--color-accent);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .task-board,
+      .doc-board,
+      .template-board,
+      .calendar-board {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-panel);
+        padding: 14px;
+        background: #fff;
+      }
+
+      .board-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .board-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 14px;
+      }
+
+      .board-title strong {
+        font-size: 12px;
+        color: var(--color-muted);
+      }
+
+      .row-item {
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--color-background);
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 13px;
+        flex-wrap: wrap;
+        align-items: flex-start;
+      }
+
+      .row-item span {
+        min-width: 0;
+        word-break: break-word;
+      }
+
+      .ok {
+        color: var(--color-success);
+      }
+
+      .warn {
+        color: var(--color-warn);
+      }
+
+      .danger {
+        color: var(--color-danger);
+      }
+
+      .section {
+        padding-top: 80px;
+      }
+
+      .section-heading {
+        font-size: 32px;
+        line-height: 1.2;
+        margin: 0 0 20px;
+      }
+
+      .features {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+      }
+
+      .feature {
+        grid-column: span 6;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-panel);
+        background: var(--color-surface);
+        padding: 20px;
+        min-height: 164px;
+      }
+
+      .feature h3 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+
+      .feature p {
+        margin: 0;
+        color: var(--color-muted);
+        font-size: 15px;
+      }
+
+      .footer-cta {
+        margin-top: 80px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-panel);
+        padding: clamp(20px, 4vw, 34px);
+        background: var(--color-surface);
+      }
+
+      .footer-cta p {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.4;
+        font-weight: 600;
+      }
+
+      .site-footer {
+        margin-top: 32px;
+        border-top: 1px solid var(--color-border);
+        padding-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 20px;
+      }
+
+      .footer-links a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      @media (max-width: 960px) {
+        .hero {
+          grid-template-columns: 1fr;
+          padding-bottom: 48px;
+        }
+
+        .hero-copy,
+        .hero-preview,
+        .feature {
+          grid-column: span 8;
+        }
+
+        .cta-row {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+
+        .section {
+          padding-top: 48px;
+        }
+
+        .section-heading {
+          font-size: 24px;
+        }
+
+        .hero-copy {
+          order: 1;
+        }
+
+        .hero-preview {
+          order: 2;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .top-bar {
+          margin-bottom: 24px;
+        }
+
+        .nav {
+          gap: 14px;
+        }
+
+        .subhead {
+          font-size: 16px;
+        }
+
+        .hero,
+        .features {
+          gap: 20px;
+        }
+
+        .hero-copy,
+        .hero-preview,
+        .feature {
+          grid-column: span 4;
+        }
+
+        .feature {
+          min-height: auto;
+        }
+
+        .section,
+        .footer-cta,
+        .page {
+          padding-top: 32px;
+        }
+
+        .footer-cta p {
+          font-size: 24px;
+        }
+
+        .site-footer {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page" data-od-id="landing-root">
+      <div class="frame">
+        <header class="top-bar" data-od-id="landing-header">
+          <p class="wordmark" data-od-id="wordmark">담임 행정 허브</p>
+          <nav class="nav" aria-label="메인 네비게이션" data-od-id="header-nav">
+            <a href="#features" data-od-id="nav-features">기능</a>
+            <a href="#demo" data-od-id="nav-demo">데모</a>
+            <a href="#start" data-od-id="nav-start">시작</a>
+          </nav>
+        </header>
+
+        <section class="hero" aria-labelledby="hero-title" data-od-id="hero-section">
+          <div class="hero-copy" data-od-id="hero-copy">
+            <h1 class="headline" id="hero-title" data-od-id="hero-title">
+              오늘 처리할 담임 행정 업무가 한 화면에 정리됩니다
+            </h1>
+            <p class="subhead" data-od-id="hero-subhead">
+              공문, 제출물, 템플릿, 마감일을 한 번에 확인해 교실 행정 업무를
+              다음 단계까지 바로 이어가도록 돕습니다.
+            </p>
+            <div class="cta-row" data-od-id="hero-cta-row">
+              <a href="/login" class="btn btn-primary" data-od-id="cta-primary">업무함 열기</a>
+              <a href="#demo" class="btn btn-secondary" data-od-id="cta-secondary">데모 보기</a>
+            </div>
+          </div>
+
+          <article class="hero-preview" aria-label="대시보드 미리보기" data-od-id="hero-preview">
+            <p class="pill" data-od-id="preview-pill">오늘 업무 대시보드</p>
+            <div class="preview-summary">
+              <p class="preview-title" data-od-id="preview-title">담임님용 업무함</p>
+              <section class="task-board" data-od-id="preview-tasks">
+                <header class="board-title">
+                  <strong>오늘 해야 할 일</strong><span>3건</span>
+                </header>
+                <div class="board-row">
+                  <div class="row-item"><span>학부모 공지 회신</span><span class="danger">긴급</span></div>
+                  <div class="row-item"><span>과제 제출물 수합</span><span class="warn">마감 D-1</span></div>
+                  <div class="row-item"><span>회의록 템플릿 배포</span><span class="ok">완료 예정</span></div>
+                </div>
+              </section>
+              <div class="task-board" data-od-id="preview-docs">
+                <header class="board-title">
+                  <strong>진행 모드</strong><span>요약 뷰</span>
+                </header>
+                <div class="board-row">
+                  <div class="row-item"><span>오늘 제출물 수합판</span><span>5개</span></div>
+                  <div class="row-item"><span>반복 문서 템플릿함</span><span>7개</span></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <div id="demo" data-od-id="demo-anchor"></div>
+        <section id="features" class="section" aria-labelledby="features-title" data-od-id="features-section">
+          <h2 class="section-heading" id="features-title" data-od-id="features-title">담임 업무를 빠르게 정리하는 기능</h2>
+          <div class="features">
+            <article class="feature" data-od-id="feature-today-inbox">
+              <h3>오늘 업무함</h3>
+              <p>오늘 처리할 공문·피드백·보고서를 한 화면으로 정렬해 우선순위순으로 안내합니다.</p>
+            </article>
+            <article class="feature" data-od-id="feature-checklist">
+              <h3>공문 처리 체크리스트</h3>
+              <p>단계별 처리 상태와 체크 이력으로 누락이나 재작업을 줄이고 이관/승인 과정을 빠르게 처리합니다.</p>
+            </article>
+            <article class="feature" data-od-id="feature-submission-board">
+              <h3>제출물 수합판</h3>
+              <p>학급별 제출 상태를 시트처럼 모아 보고 미제출 항목을 즉시 확인할 수 있습니다.</p>
+            </article>
+            <article class="feature" data-od-id="feature-template-box">
+              <h3>반복 문서 템플릿함</h3>
+              <p>자주 쓰는 통지문, 안내문, 보고서 양식을 한 번에 저장해 반복 작업 시간을 단축합니다.</p>
+            </article>
+            <article class="feature" data-od-id="feature-calendar">
+              <h3>마감 캘린더</h3>
+              <p>학기 일정과 학교 행정 마감일을 한눈에 보여주어 놓치기 쉬운 업무를 미리 경고합니다.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="start" class="footer-cta" data-od-id="footer-cta">
+          <p data-od-id="footer-cta-copy">오늘 놓칠 일을 줄이고, 내일 처리할 일을 미리 봅니다.</p>
+        </section>
+
+        <footer class="site-footer" data-od-id="site-footer">
+          <div class="footer-links" data-od-id="footer-links">
+            <a href="#features" data-od-id="footer-link-features">기능</a>
+            <a href="#demo" data-od-id="footer-link-demo">데모</a>
+            <a href="/login" data-od-id="footer-link-start">시작하기</a>
+          </div>
+          <p data-od-id="footer-copyright">© 담임 행정 허브</p>
+        </footer>
+      </div>
+    </main>
+  </body>
+</html>

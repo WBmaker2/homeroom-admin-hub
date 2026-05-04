@@ -1,0 +1,131 @@
+.task-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.task-editor-form {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  padding: 12px;
+}
+
+.task-editor-form h2 {
+  margin: 0;
+}
+
+.task-editor-field {
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.task-editor-field input,
+.task-editor-field select,
+.task-editor-field textarea {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+  background: #ffffff;
+}
+
+.task-editor-field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.task-editor-location-section {
+  display: grid;
+  gap: 10px;
+}
+
+.task-editor-location-section h3 {
+  margin: 0;
+}
+
+.task-editor-location-form {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  background: var(--color-surface);
+}
+
+.task-editor-location-add,
+.task-editor-location-delete,
+.task-editor-location-fallback-actions button {
+  border: 1px solid var(--color-accent);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: #ffffff;
+  background: var(--color-accent);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.task-editor-location-fallback {
+  border: 1px dashed var(--color-border);
+  background: #fff7ed;
+  border-radius: 8px;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.task-editor-location-fallback p {
+  margin: 0;
+  color: #7c2d12;
+}
+
+.task-editor-location-fallback-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.task-editor-location-fallback-actions button:first-child {
+  background: #0f172a;
+}
+
+.task-editor-location-list {
+  display: grid;
+  gap: 8px;
+}
+
+.task-editor-empty {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.task-editor-location-item {
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.task-editor-location-content {
+  min-width: 0;
+}
+
+.task-editor-location-item p,
+.task-editor-location-value {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.task-editor-location-item p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.task-editor-location-delete {
+  flex-shrink: 0;
+}
