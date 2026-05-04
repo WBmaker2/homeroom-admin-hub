@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import '../design/tokens.css'
 import './LandingPage.css'
 
@@ -64,9 +65,9 @@ export function LandingPage() {
               다음 단계까지 바로 이어가도록 돕습니다.
             </p>
             <div className="landing-cta-row" data-od-id="hero-cta-row">
-              <a href="/login" className="landing-btn landing-btn-primary" data-od-id="cta-primary">
+              <Link to="/login" className="landing-btn landing-btn-primary" data-od-id="cta-primary">
                 업무함 열기
-              </a>
+              </Link>
               <a href="#demo" className="landing-btn landing-btn-secondary" data-od-id="cta-secondary">
                 데모 보기
               </a>
@@ -154,9 +155,9 @@ export function LandingPage() {
             <a href="#demo" data-od-id="footer-link-demo">
               데모
             </a>
-            <a href="/login" data-od-id="footer-link-start">
+            <Link to="/login" data-od-id="footer-link-start">
               시작하기
-            </a>
+            </Link>
           </div>
           <p data-od-id="footer-copyright">© 담임 행정 허브</p>
         </footer>
