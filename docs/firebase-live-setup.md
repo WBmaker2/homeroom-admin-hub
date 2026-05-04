@@ -10,9 +10,10 @@
 - Firestore rules/indexes: 서울 리전 재생성 후 재배포 완료
 - Firestore data sync: `classes`, `tasks`, `collections`, `templates` 화면 저장 연결 완료
 - GitHub repository variables: Firebase 웹앱 설정값 등록 완료
-- GitHub Pages mode: `VITE_APP_MODE=demo` 유지
+- Firebase Authentication: 이메일/비밀번호 제공업체 활성화 완료
+- GitHub Pages mode: `VITE_APP_MODE=live` 전환
 
-공개 GitHub Pages는 현재 데모 모드로 유지합니다. Firebase 설정값과 Firestore 저장 경로는 준비되어 있으므로, Authentication 제공업체가 활성화되면 `VITE_APP_MODE=live`로 전환할 수 있습니다.
+공개 GitHub Pages는 현재 Firebase Auth와 사용자별 Firestore 저장 경계를 사용하는 실사용 모드로 운영합니다.
 
 > 참고: 최초 생성된 `nam5` DB는 실데이터 입력 전 삭제했고, `(default)` DB를 `asia-northeast3`으로 다시 생성했습니다.
 
@@ -35,7 +36,7 @@ VITE_FIREBASE_PROJECT_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
 
-현재는 공개 데모 운영을 위해 아래 값으로 유지합니다.
+데모 모드가 필요할 때는 아래 값으로 되돌립니다.
 
 ```bash
 VITE_APP_MODE=demo
@@ -61,9 +62,9 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <fi
 
 ## 4. 확인 흐름
 
-1. GitHub Actions `Deploy GitHub Pages` workflow가 성공하는지 확인합니다.
-2. Firebase 콘솔에서 Authentication 이메일/비밀번호 제공업체를 활성화합니다.
-3. GitHub Actions variable `VITE_APP_MODE`를 `live`로 바꿉니다.
+1. Firebase 콘솔에서 Authentication 이메일/비밀번호 제공업체가 `사용 설정됨`인지 확인합니다.
+2. GitHub Actions variable `VITE_APP_MODE=live` 상태를 확인합니다.
+3. GitHub Actions `Deploy GitHub Pages` workflow가 성공하는지 확인합니다.
 4. 로그인 화면에서 `실사용 모드` 문구가 보이는지 확인합니다.
 5. 새 계정을 만들고 `/app/inbox`로 이동되는지 확인합니다.
 6. 학급, 업무, 수합판, 템플릿을 하나씩 저장한 뒤 새로고침 후에도 유지되는지 확인합니다.
@@ -71,6 +72,5 @@ npx firebase-tools deploy --only firestore:rules,firestore:indexes --project <fi
 
 ## 현재 제한
 
-- 공개 GitHub Pages는 기본적으로 데모 모드 배포를 권장합니다.
-- Firebase Authentication 이메일/비밀번호 제공업체 활성화는 Firebase 콘솔에서 수동 확인이 필요합니다.
-- Firebase Authentication이 아직 초기화되지 않은 상태에서는 CLI/API에서 `CONFIGURATION_NOT_FOUND`가 반환됩니다.
+- 공개 GitHub Pages는 실사용 모드이므로 접속하려면 Firebase Auth 계정이 필요합니다.
+- 새 사용자 계정 생성은 Firebase Authentication에 실제 계정을 추가하므로 운영 전 테스트 계정을 정리합니다.

@@ -43,12 +43,12 @@ VITE_APP_MODE=demo
 VITE_DEMO_AUTH_USER=demo-user
 ```
 
-GitHub Pages workflow는 repository variables를 읽어 빌드합니다. 실사용 모드로 전환하려면 repo variables에
+GitHub Pages workflow는 repository variables를 읽어 빌드합니다. 실사용 모드로 운영하려면 repo variables에
 `VITE_APP_MODE=live`와 `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`,
 `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`를 등록합니다.
 
 현재 Firebase 프로젝트는 `homeroom-admin-hub-wbmaker2`, Firestore 리전은 `asia-northeast3`(Seoul)입니다.
-Authentication Email/Password 제공업체를 콘솔에서 활성화한 뒤 `VITE_APP_MODE=live`로 전환합니다.
+Authentication Email/Password 제공업체가 활성화되어 있으며, 공개 GitHub Pages는 `VITE_APP_MODE=live`로 배포합니다.
 
 자세한 실사용 연결 순서는 [Firebase 실사용 연결 체크리스트](docs/firebase-live-setup.md)를 참고합니다.
 
