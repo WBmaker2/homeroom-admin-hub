@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import type { TaskItem } from '../types/domain';
-import { buildTaskList, getTaskStore, saveTaskStore } from './taskService';
+import { buildTaskList, createTaskId, getTaskStore, saveTaskStore } from './taskService';
 import { TaskCard } from '../inbox/TaskCard';
 import { useUserRecords } from '../firebase/useUserRecords';
 import './TaskListPage.css';
@@ -113,6 +113,123 @@ const baseTasks: TaskItem[] = [
   },
 ];
 
+type CreateMode = 'OFFICIAL_DOCUMENT' | 'PERSONAL_DUE';
+
+type CreateModeLabel = (type: CreateMode) => string;
+type CreatePayload = {
+  title: string;
+  dueDate: string;
+  submissionTarget: string;
+  memo: string;
+};
+
+const getCreateModeLabel: CreateModeLabel = (type) => {
+  return type === 'OFFICIAL_DOCUMENT' ? '공문 추가' : '개인 마감 추가';
+};
+
+const getCreatePrompt = (type: CreateMode) => {
+  return type === 'OFFICIAL_DOCUMENT'
+    ? '공문 제목을 입력하고 간단한 보조 정보를 함께 저장해 주세요.'
+    : '개인 마감 제목을 입력하고 간단한 보조 정보를 함께 저장해 주세요.';
+};
+
+const normalizeDate = (value: string): string | null => {
+  const trimmed = value.trim();
+  return trimmed.length === 0 ? null : trimmed;
+};
+
+function TaskCreateForm({
+  mode,
+  onCreate,
+}: {
+  mode: CreateMode;
+  onCreate: (mode: CreateMode, payload: CreatePayload) => void;
+}) {
+  const [title, setTitle] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [submissionTarget, setSubmissionTarget] = useState('');
+  const [memo, setMemo] = useState('');
+  const [formError, setFormError] = useState('');
+
+  const titleLabel = getCreateModeLabel(mode);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setFormError('');
+
+    const normalizedTitle = title.trim();
+    if (!normalizedTitle) {
+      setFormError('제목은 필수입니다.');
+      return;
+    }
+
+    onCreate(mode, {
+      title: normalizedTitle,
+      dueDate,
+      submissionTarget: submissionTarget.trim(),
+      memo: memo.trim(),
+    });
+    setTitle('');
+    setDueDate('');
+    setSubmissionTarget('');
+    setMemo('');
+  };
+
+  return (
+    <section className="task-list-intent" role="status" aria-live="polite">
+      <h2 className="task-list-intent-title">{titleLabel}</h2>
+      <p>{getCreatePrompt(mode)}</p>
+      <form className="task-list-intent-form" onSubmit={handleSubmit}>
+        <label className="task-list-intent-field">
+          <span>제목</span>
+          <input
+            type="text"
+            value={title}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              setTitle(event.currentTarget.value);
+            }}
+          />
+        </label>
+        <label className="task-list-intent-field">
+          <span>마감일</span>
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              setDueDate(event.currentTarget.value);
+            }}
+          />
+        </label>
+        <label className="task-list-intent-field">
+          <span>제출 대상</span>
+          <input
+            type="text"
+            value={submissionTarget}
+            onChange={(event: ChangeEvent<HTMLInputElement>) => {
+              setSubmissionTarget(event.currentTarget.value);
+            }}
+            placeholder="예: 학부모, 행정실"
+          />
+        </label>
+        <label className="task-list-intent-field">
+          <span>메모</span>
+          <textarea
+            value={memo}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
+              setMemo(event.currentTarget.value);
+            }}
+            placeholder="추가 메모"
+          />
+        </label>
+        <button type="submit" className="task-list-intent-action">
+          {titleLabel} 저장
+        </button>
+      </form>
+      {formError ? <p className="task-list-message task-list-message-error" role="alert">{formError}</p> : null}
+    </section>
+  );
+}
+
 export function TaskListView({
   tasks,
   includeArchived,
@@ -179,9 +296,14 @@ export function TaskListPage() {
   })
   const tasks = storedTasks.length > 0 || usingFirestore ? storedTasks : baseTasks
   const [includeArchived, setIncludeArchived] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const intent = searchParams.get('intent');
   const createType = searchParams.get('type');
+  const createMode = intent === 'create' && (createType === 'OFFICIAL_DOCUMENT' || createType === 'PERSONAL_DUE')
+    ? createType
+    : null;
+  const isCreateReady = !(usingFirestore && loading);
+  const [formMessage, setFormMessage] = useState('');
 
   const handleComplete = (taskId: string) => {
     setStoredTasks((current) =>
@@ -197,30 +319,56 @@ export function TaskListPage() {
     );
   };
 
-  const intentTitle =
-    intent === 'create'
-      ? createType === 'PERSONAL_DUE'
-        ? '개인 마감 추가 준비'
-        : '공문 추가 준비'
-      : null;
+  const createDraftTask = (
+    type: CreateMode,
+    overrides: {
+      title: string;
+      dueDate: string | null;
+      memo: string;
+      submissionTarget: string;
+    },
+  ): TaskItem => ({
+    id: createTaskId(),
+    userId: 'user-demo',
+    type,
+    calendarCategory: type === 'OFFICIAL_DOCUMENT' ? 'SCHOOL' : 'PERSONAL',
+    title: overrides.title,
+    dueDate: overrides.dueDate,
+    status: 'RECEIVED',
+    memo: overrides.memo,
+    sourceMemo: '',
+    submissionTarget: overrides.submissionTarget,
+    locationLinks: [],
+    linkedCollectionIds: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  const handleCreateSubmit = (mode: CreateMode, payload: CreatePayload) => {
+    if (usingFirestore && loading) {
+      return;
+    }
+
+    const nextTask = createDraftTask(mode, {
+      title: payload.title,
+      dueDate: normalizeDate(payload.dueDate),
+      memo: payload.memo,
+      submissionTarget: payload.submissionTarget,
+    });
+
+    setStoredTasks((current) => {
+      const currentOrSeed = current.length > 0 || usingFirestore ? current : baseTasks;
+      return [...currentOrSeed, nextTask];
+    });
+
+    setFormMessage(`${getCreateModeLabel(mode)} 항목이 생성되었습니다.`);
+    setSearchParams({}, { replace: true });
+  };
 
   return (
     <div className="task-list-page">
-      {intentTitle && (
-        <section className="task-list-intent" role="status" aria-live="polite">
-          <h2 className="task-list-intent-title">{intentTitle}</h2>
-          <p>현재는 준비 단계 화면입니다. 다음 단계에서 {intentTitle} 입력 폼이 연결됩니다.</p>
-          <form className="task-list-intent-form">
-            <label className="task-list-intent-field">
-              <span>제목</span>
-              <input type="text" placeholder="예: 5월 학급 공지 제출 마감" disabled />
-            </label>
-            <button type="button" disabled className="task-list-intent-action">
-              다음 단계에서 처리
-            </button>
-          </form>
-        </section>
-      )}
+      {createMode && isCreateReady ? <TaskCreateForm key={createMode} mode={createMode} onCreate={handleCreateSubmit} /> : null}
+      {formMessage ? <p className="task-list-message" role="status" aria-live="polite">{formMessage}</p> : null}
       <label className="task-list-archive-toggle" htmlFor="include-archived">
         <input
           id="include-archived"
