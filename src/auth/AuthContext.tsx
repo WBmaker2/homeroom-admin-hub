@@ -8,23 +8,16 @@ import {
   useState,
 } from 'react';
 import { type User } from 'firebase/auth';
-import {
-  createAccountWithEmail,
-  observeAuth,
-  signInWithEmail,
-  signOutCurrentUser,
-} from './authService';
 import { DEMO_USER_ID, isDemoAuthMode } from '../firebase/seedDemoData';
+
+type AuthResult = Promise<{ user: User }>;
 
 type AuthContextValue = {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => ReturnType<typeof signInWithEmail>;
-  createAccount: (
-    email: string,
-    password: string,
-  ) => ReturnType<typeof createAccountWithEmail>;
-  signOut: () => ReturnType<typeof signOutCurrentUser>;
+  signIn: (email: string, password: string) => AuthResult;
+  createAccount: (email: string, password: string) => AuthResult;
+  signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -49,24 +42,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (demoMode) return;
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
 
-    const unsubscribe = observeAuth((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
+    void import('./authService')
+      .then(({ observeAuth }) => {
+        if (cancelled) return;
 
-    return unsubscribe;
-  }, [demoMode, demoUser]);
+        unsubscribe = observeAuth((currentUser) => {
+          setUser(currentUser);
+          setLoading(false);
+        });
+      })
+      .catch((error: unknown) => {
+        console.error('Firebase auth failed to initialize.', error);
+        if (cancelled) return;
+        setUser(null);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [demoMode]);
 
   const signIn = (email: string, password: string) => {
     if (demoMode) {
       setUser(demoUser);
       return Promise.resolve({
         user: demoUser,
-      } as unknown as ReturnType<typeof signInWithEmail>);
+      });
     }
 
-    return signInWithEmail(email, password);
+    return import('./authService').then(({ signInWithEmail }) =>
+      signInWithEmail(email, password),
+    );
   };
 
   const createAccount = (email: string, password: string) => {
@@ -74,19 +85,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(demoUser);
       return Promise.resolve({
         user: demoUser,
-      } as unknown as ReturnType<typeof createAccountWithEmail>);
+      });
     }
 
-    return createAccountWithEmail(email, password);
+    return import('./authService').then(({ createAccountWithEmail }) =>
+      createAccountWithEmail(email, password),
+    );
   };
 
   const signOut = () => {
     if (demoMode) {
       setUser(null);
-      return Promise.resolve(undefined as unknown as ReturnType<typeof signOutCurrentUser>);
+      return Promise.resolve();
     }
 
-    return signOutCurrentUser();
+    return import('./authService').then(({ signOutCurrentUser }) => signOutCurrentUser());
   };
 
   return (

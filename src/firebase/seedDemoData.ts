@@ -12,8 +12,20 @@ export const DEMO_COLLECTION_ID = 'collection-demo-2026-05'
 export const DEMO_TEMPLATE_ID = 'template-demo-notice-001'
 export const DEMO_CLASS_ID = 'class-demo-1'
 
+const hasFirebaseConfig = (): boolean => {
+  return [
+    import.meta.env.VITE_FIREBASE_API_KEY,
+    import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    import.meta.env.VITE_FIREBASE_APP_ID,
+  ].every((value) => typeof value === 'string' && value.trim().length > 0)
+}
+
 export const isDemoAuthMode = (): boolean => {
-  return import.meta.env.VITE_DEMO_AUTH_USER === DEMO_USER_ID
+  return (
+    import.meta.env.VITE_DEMO_AUTH_USER === DEMO_USER_ID ||
+    (import.meta.env.MODE !== 'test' && !hasFirebaseConfig())
+  )
 }
 
 type DemoSeedStudent = {
