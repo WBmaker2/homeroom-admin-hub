@@ -6,14 +6,14 @@
 - Firebase web app: `Homeroom Admin Hub Web`
 - Firebase app id: `1:1092215945337:web:7015731b0af3ed0e55bca8`
 - Firestore database: `(default)`, Native mode, Standard edition
-- Firestore location: `nam5`
-- Firestore rules/indexes: 배포 완료
+- Firestore location: `asia-northeast3` (Seoul)
+- Firestore rules/indexes: 서울 리전 재생성 후 재배포 완료
 - GitHub repository variables: Firebase 웹앱 설정값 등록 완료
 - GitHub Pages mode: `VITE_APP_MODE=demo` 유지
 
 공개 GitHub Pages는 현재 데모 모드로 유지합니다. Firebase 설정값은 Actions variables에 등록되어 있으므로, Authentication 제공업체와 데이터 영속화가 준비되면 `VITE_APP_MODE=live`로 전환할 수 있습니다.
 
-> 참고: Firestore 위치가 `nam5`로 생성되었습니다. 실제 학교/교사용 운영에서 서울 리전을 꼭 써야 한다면, 실데이터 입력 전에 Firestore 데이터베이스를 삭제하고 `asia-northeast3`으로 다시 만드는 결정을 먼저 해야 합니다.
+> 참고: 최초 생성된 `nam5` DB는 실데이터 입력 전 삭제했고, `(default)` DB를 `asia-northeast3`으로 다시 생성했습니다.
 
 ## 1. Firebase 콘솔 설정
 
