@@ -41,12 +41,37 @@ const renderCreatePage = (type: 'OFFICIAL_DOCUMENT' | 'PERSONAL_DUE') =>
     </MemoryRouter>,
   );
 
+const renderTaskDetailPage = (taskId: string) =>
+  render(
+    <MemoryRouter initialEntries={[`/app/tasks?taskId=${taskId}`]}>
+      <TaskListPage />
+    </MemoryRouter>,
+  );
+
 const getLatestSavedTasks = (
   spy: SaveTaskStoreSpy
 ): TaskItem[] | undefined => {
   const call = spy.mock.calls.at(-1);
   return call?.[0];
 };
+
+const makeTask = (overrides: Partial<TaskItem> = {}): TaskItem => ({
+  id: overrides.id ?? 'task-personal-1',
+  userId: 'user-1',
+  type: 'PERSONAL_DUE',
+  calendarCategory: 'PERSONAL',
+  title: '개인 마감',
+  dueDate: '2026-05-10',
+  status: 'RECEIVED',
+  memo: '',
+  sourceMemo: '',
+  submissionTarget: '',
+  locationLinks: [],
+  linkedCollectionIds: [],
+  createdAt: '2026-05-01T10:00:00.000Z',
+  updatedAt: '2026-05-01T10:00:00.000Z',
+  ...overrides,
+});
 
 describe('TaskListPage create intent form', () => {
   beforeEach(() => {
@@ -145,5 +170,34 @@ describe('TaskListPage create intent form', () => {
     expect(screen.queryByRole('heading', { name: '공문 추가' })).toBeNull();
     expect(screen.queryByRole('button', { name: '공문 추가 저장' })).toBeNull();
     expect(screen.getByRole('status')).toHaveTextContent('업무 목록을 불러오는 중입니다.');
+  });
+
+  it('opens personal due detail from taskId query and saves edits', async () => {
+    const personalTask = makeTask({
+      id: 'personal-due-1',
+      title: '기존 개인 마감',
+      dueDate: '2026-05-12',
+      memo: '이전 메모',
+    });
+    vi.mocked(taskService.getTaskStore).mockReturnValue([personalTask]);
+    const saveSpy = vi.spyOn(taskService, 'saveTaskStore');
+    const user = userEvent.setup();
+
+    renderTaskDetailPage('personal-due-1');
+
+    expect(screen.getByRole('heading', { name: '개인 마감 상세' })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('제목'));
+    await user.type(screen.getByLabelText('제목'), '수정된 개인 마감');
+    await user.selectOptions(screen.getByLabelText('상태'), 'DONE');
+
+    const savedTasks = getLatestSavedTasks(saveSpy);
+    const savedTask = savedTasks?.find((task) => task.id === 'personal-due-1');
+
+    expect(savedTask).toMatchObject({
+      title: '수정된 개인 마감',
+      status: 'DONE',
+    });
+    expect(screen.getByText('업무 상세가 저장되었습니다.')).toBeInTheDocument();
   });
 });

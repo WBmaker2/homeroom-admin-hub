@@ -84,9 +84,9 @@ function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
     return draftTask ?? createOfficialDocumentDraft()
   }, [draftTask, normalizedTaskId, tasks])
 
-  const isLocalDemoTask = taskId
-    ? !tasks.some((item) => item.id === task.id)
-    : true
+  const isStoredTask = tasks.some((item) => item.id === task.id)
+  const isDraftTask = !taskId || !isStoredTask
+  const storageLabel = usingFirestore ? 'Firestore 개인 저장소' : '브라우저 로컬 저장소'
 
   const applyPatch = (patch: Partial<TaskItem>) => {
     const updated = 'status' in patch && patch.status
@@ -149,7 +149,7 @@ function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
   const urgentHint = task.status === 'DONE' ? (
     <p className="official-document-urgent-note" role="status" aria-live="polite">
       완료로 변경되어 오늘 업무함 긴급 항목에서 사라집니다.
-      {usingFirestore ? ' Firestore에 반영되었습니다.' : ' (현재 화면은 로컬 데모 임시 저장)'}
+      {usingFirestore ? ' Firestore에 반영되었습니다.' : ' 브라우저 로컬 저장소에 반영되었습니다.'}
     </p>
   ) : null
 
@@ -188,10 +188,11 @@ function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
       <section className="official-document-headline">
         <h1>{task.title || '새 공문 작성'}</h1>
         <p className="official-document-mode">
-          대상: {isLocalDemoTask ? '로컬 임시 초안' : `기존 항목 (${taskId})`}
-          {isLocalDemoTask ? ' / 데모 모드' : ''}
+          저장 상태: {isDraftTask ? '새 초안' : `저장된 항목 (${task.id})`} / {storageLabel}
         </p>
-        <p className="official-document-description">TaskItem 형식으로 로컬 데모 데이터를 직접 편집합니다.</p>
+        <p className="official-document-description">
+          공문 처리 상태, 마감일, 제출 대상, 위치 메모를 {storageLabel}에 저장합니다.
+        </p>
         <p className="official-document-privacy-notice">
           이 앱은 개인용 담임 행정 정리 도구입니다. 공문 원본 파일, 학생 사진, 실제 상담 기록, 생활지도 사건 기록은 저장하지 마세요.
         </p>
@@ -221,7 +222,7 @@ function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
             const next = resolveOfficialDocumentDraft(undefined)
             setDraftTask(next)
             setDocumentType('공문')
-            setStatusInfo('새로운 데모 초안으로 초기화했습니다.')
+            setStatusInfo('새로운 공문 초안으로 초기화했습니다.')
           }}
         >
           새 초안 시작

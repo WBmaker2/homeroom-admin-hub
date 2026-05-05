@@ -1,6 +1,6 @@
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import type { TaskItem } from '../types/domain';
+import type { TaskItem, TaskStatus } from '../types/domain';
 import { buildTaskList, createTaskId, getTaskStore, saveTaskStore } from './taskService';
 import { TaskCard } from '../inbox/TaskCard';
 import { useUserRecords } from '../firebase/useUserRecords';
@@ -114,6 +114,7 @@ const baseTasks: TaskItem[] = [
 ];
 
 type CreateMode = 'OFFICIAL_DOCUMENT' | 'PERSONAL_DUE';
+type TaskPatch = Partial<Pick<TaskItem, 'title' | 'dueDate' | 'status' | 'submissionTarget' | 'memo'>>;
 
 type CreateModeLabel = (type: CreateMode) => string;
 type CreatePayload = {
@@ -122,6 +123,20 @@ type CreatePayload = {
   submissionTarget: string;
   memo: string;
 };
+
+const taskTypeLabel: Record<TaskItem['type'], string> = {
+  OFFICIAL_DOCUMENT: '공문',
+  CLASS_SUBMISSION: '수합판',
+  PERSONAL_DUE: '개인 마감',
+};
+
+const taskStatusOptions: { value: TaskStatus; label: string }[] = [
+  { value: 'RECEIVED', label: '접수' },
+  { value: 'IN_PROGRESS', label: '처리 중' },
+  { value: 'WAITING_SUBMISSION', label: '제출 대기' },
+  { value: 'DONE', label: '완료' },
+  { value: 'ARCHIVED', label: '보관' },
+];
 
 const getCreateModeLabel: CreateModeLabel = (type) => {
   return type === 'OFFICIAL_DOCUMENT' ? '공문 추가' : '개인 마감 추가';
@@ -230,6 +245,96 @@ function TaskCreateForm({
   );
 }
 
+function TaskDetailPanel({
+  task,
+  onClose,
+  onTaskPatch,
+}: {
+  task: TaskItem;
+  onClose: () => void;
+  onTaskPatch: (taskId: string, patch: TaskPatch) => void;
+}) {
+  const title =
+    task.type === 'PERSONAL_DUE'
+      ? '개인 마감 상세'
+      : `${taskTypeLabel[task.type]} 상세`;
+
+  return (
+    <section className="task-list-detail" aria-labelledby="task-list-detail-title">
+      <div className="task-list-detail-header">
+        <div>
+          <p className="task-list-detail-kicker">{taskTypeLabel[task.type]}</p>
+          <h2 id="task-list-detail-title">{title}</h2>
+        </div>
+        <button type="button" className="task-list-detail-close" onClick={onClose}>
+          닫기
+        </button>
+      </div>
+      <form className="task-list-detail-form" onSubmit={(event) => event.preventDefault()}>
+        <label className="task-list-intent-field">
+          <span>제목</span>
+          <input
+            type="text"
+            value={task.title}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onTaskPatch(task.id, { title: event.currentTarget.value })
+            }
+          />
+        </label>
+        <label className="task-list-intent-field">
+          <span>마감일</span>
+          <input
+            type="date"
+            value={task.dueDate ?? ''}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onTaskPatch(task.id, { dueDate: normalizeDate(event.currentTarget.value) })
+            }
+          />
+        </label>
+        <label className="task-list-intent-field">
+          <span>상태</span>
+          <select
+            value={task.status}
+            onChange={(event: ChangeEvent<HTMLSelectElement>) =>
+              onTaskPatch(task.id, { status: event.currentTarget.value as TaskStatus })
+            }
+          >
+            {taskStatusOptions.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="task-list-intent-field">
+          <span>제출 대상</span>
+          <input
+            type="text"
+            value={task.submissionTarget}
+            onChange={(event: ChangeEvent<HTMLInputElement>) =>
+              onTaskPatch(task.id, { submissionTarget: event.currentTarget.value })
+            }
+            placeholder={task.type === 'PERSONAL_DUE' ? '예: 내 점검 항목' : '예: 학부모, 행정실'}
+          />
+        </label>
+        <label className="task-list-intent-field task-list-detail-wide">
+          <span>메모</span>
+          <textarea
+            value={task.memo}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+              onTaskPatch(task.id, { memo: event.currentTarget.value })
+            }
+            placeholder="처리 전에 확인할 메모"
+          />
+        </label>
+      </form>
+      <p className="task-list-detail-note">
+        수정 내용은 현재 업무 목록과 캘린더에 바로 반영됩니다.
+      </p>
+    </section>
+  );
+}
+
 export function TaskListView({
   tasks,
   includeArchived,
@@ -299,11 +404,13 @@ export function TaskListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const intent = searchParams.get('intent');
   const createType = searchParams.get('type');
+  const selectedTaskId = searchParams.get('taskId')?.trim() ?? '';
   const createMode = intent === 'create' && (createType === 'OFFICIAL_DOCUMENT' || createType === 'PERSONAL_DUE')
     ? createType
     : null;
   const isCreateReady = !(usingFirestore && loading);
   const [formMessage, setFormMessage] = useState('');
+  const selectedTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : null;
 
   const handleComplete = (taskId: string) => {
     setStoredTasks((current) =>
@@ -317,6 +424,22 @@ export function TaskListPage() {
           : task,
       ),
     );
+  };
+
+  const handleTaskPatch = (taskId: string, patch: TaskPatch) => {
+    setStoredTasks((current) => {
+      const source = current.length > 0 ? current : tasks;
+      return source.map((task) =>
+        task.id === taskId
+          ? {
+              ...task,
+              ...patch,
+              updatedAt: new Date().toISOString(),
+            }
+          : task,
+      );
+    });
+    setFormMessage('업무 상세가 저장되었습니다.');
   };
 
   const createDraftTask = (
@@ -368,6 +491,18 @@ export function TaskListPage() {
   return (
     <div className="task-list-page">
       {createMode && isCreateReady ? <TaskCreateForm key={createMode} mode={createMode} onCreate={handleCreateSubmit} /> : null}
+      {!createMode && selectedTask ? (
+        <TaskDetailPanel
+          task={selectedTask}
+          onTaskPatch={handleTaskPatch}
+          onClose={() => setSearchParams({}, { replace: true })}
+        />
+      ) : null}
+      {!createMode && selectedTaskId && !selectedTask && !loading ? (
+        <p className="task-list-empty" role="alert">
+          선택한 업무를 찾지 못했습니다.
+        </p>
+      ) : null}
       {formMessage ? <p className="task-list-message" role="status" aria-live="polite">{formMessage}</p> : null}
       <label className="task-list-archive-toggle" htmlFor="include-archived">
         <input

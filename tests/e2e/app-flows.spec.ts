@@ -6,6 +6,14 @@ async function expectNoFileInputs(page: Page) {
   await expect(page.locator('input[type="file"]')).toHaveCount(0)
 }
 
+function todayDateInputValue() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 test('공문 업무 흐름', async ({ page }) => {
   await page.goto('/app/inbox')
   await expect(page.getByRole('heading', { name: '오늘 업무함' })).toBeVisible()
@@ -105,6 +113,26 @@ test('학급 명부 수동 입력 흐름', async ({ page }) => {
 
   await expect(page.getByText('E2E학생 학생이 등록되었습니다.')).toBeVisible()
   await expect(page.getByRole('row', { name: /31 E2E학생 E2E학생/ })).toBeVisible()
+  await expectNoFileInputs(page)
+})
+
+test('개인 마감 생성 후 캘린더에서 상세 편집 흐름', async ({ page }) => {
+  await page.goto('/app/tasks?intent=create&type=PERSONAL_DUE')
+  await expect(page.getByRole('heading', { name: '개인 마감 추가' })).toBeVisible()
+
+  await page.getByLabel('제목').fill('E2E 개인 마감')
+  await page.getByLabel('마감일').fill(todayDateInputValue())
+  await page.getByLabel('메모').fill('캘린더 연결 확인')
+  await page.getByRole('button', { name: '개인 마감 추가 저장' }).click()
+  await expect(page.getByRole('heading', { name: 'E2E 개인 마감' })).toBeVisible()
+
+  await page.goto('/app/calendar')
+  await page.getByRole('link', { name: /E2E 개인 마감/ }).click()
+  await expect(page).toHaveURL(/\/app\/tasks\?taskId=/)
+  await expect(page.getByRole('heading', { name: '개인 마감 상세' })).toBeVisible()
+
+  await page.getByLabel('메모').fill('캘린더에서 상세 수정')
+  await expect(page.getByText('업무 상세가 저장되었습니다.')).toBeVisible()
   await expectNoFileInputs(page)
 })
 
