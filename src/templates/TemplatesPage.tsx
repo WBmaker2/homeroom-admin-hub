@@ -149,6 +149,10 @@ export function TemplatesPage() {
   }
 
   const handleSelectTemplate = (template: TemplateItem) => {
+    if (isBusyAction) {
+      return
+    }
+
     setIsCreateMode(false)
     setSelectedTemplateId(template.id)
     setDraftTemplate(cloneTemplate(template))
@@ -306,6 +310,7 @@ export function TemplatesPage() {
                   type="button"
                   className={`templates-list-select${template.id === selectedTemplateId ? ' is-active' : ''}`}
                   onClick={() => handleSelectTemplate(template)}
+                  disabled={isBusyAction}
                 >
                   <span className="templates-list-cell templates-list-title">
                     <strong>{template.title || '제목 없음'}</strong>

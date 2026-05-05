@@ -224,4 +224,28 @@ describe('TemplatesPage clipboard interactions', () => {
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     expect(screen.getByRole('button', { name: '미리보기 복사' })).toBeDisabled()
   })
+
+  it('disables template selection while persistence is busy', async () => {
+    const secondTemplate: TemplateItem = {
+      ...seedTemplate,
+      id: 'template-second',
+      title: '두 번째 템플릿',
+    }
+    const setTemplates = vi
+      .fn()
+      .mockImplementation(
+        () => new Promise(() => {
+          // keep busy state active for assertion
+        }),
+      )
+    mockTemplateRecords([seedTemplate, secondTemplate], setTemplates)
+    const user = userEvent.setup()
+
+    renderTemplatesPage()
+
+    await user.click(screen.getByRole('button', { name: '저장' }))
+    const templateList = screen.getByRole('list', { name: '템플릿 목록' })
+    expect(within(templateList).getByRole('button', { name: /학급 제출물 안내/ })).toBeDisabled()
+    expect(within(templateList).getByRole('button', { name: /두 번째 템플릿/ })).toBeDisabled()
+  })
 })
