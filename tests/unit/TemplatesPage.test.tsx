@@ -20,6 +20,19 @@ const renderTemplatesPage = () => render(
   </MemoryRouter>,
 )
 
+const customTemplate = {
+  id: 'template-custom',
+  userId: 'user-1',
+  title: '사용자 템플릿',
+  type: 'OTHER' as const,
+  body: '{학급} 안내',
+  tags: ['커스텀'],
+  replacementKeys: ['학급'],
+  lastUsedAt: null,
+  createdAt: '2026-05-01T09:00:00.000Z',
+  updatedAt: '2026-05-01T09:00:00.000Z',
+}
+
 const getFirstTemplateButton = () => {
   const templateList = screen.getByRole('list', { name: '템플릿 목록' })
   return within(templateList).getByRole('button', { name: /학급 제출물 안내/ })
@@ -116,5 +129,13 @@ describe('TemplatesPage clipboard interactions', () => {
     expect(firstTemplateButton.textContent ?? '').not.toContain(beforeLastUsed)
     expect(screen.getByLabelText('제목')).toHaveValue('임시 제목 변경')
     expect(bodyInput).toHaveValue(previewText)
+  })
+
+  it('initializes selected template from local store when no intentCreate', async () => {
+    vi.spyOn(templateService, 'getTemplateStore').mockReturnValue([customTemplate])
+
+    renderTemplatesPage()
+
+    expect(await screen.findByDisplayValue('사용자 템플릿')).toBeInTheDocument()
   })
 })

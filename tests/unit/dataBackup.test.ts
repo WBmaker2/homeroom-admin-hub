@@ -130,6 +130,42 @@ describe('dataBackup schema helpers', () => {
     expect(parsed.error).toContain('classes')
   })
 
+  it('rejects non-object item in required groups', () => {
+    const parsed = parseBackupPayload(
+      JSON.stringify({
+        tasks: [{ id: 'task-1', bad: true }, 'oops'],
+        classes: [{ id: 'class-1', students: [] }],
+        collections: [{ id: 'collection-1', collection: {}, students: [] }],
+        templates: [{ id: 'template-1', title: '안내', body: '', tags: [], replacementKeys: [] }],
+      }),
+    )
+
+    expect(parsed.ok).toBe(false)
+    if (parsed.ok) {
+      return
+    }
+
+    expect(parsed.error).toContain('tasks의 각 항목에 id 문자열이 필요합니다.')
+  })
+
+  it('rejects templates missing tags or replacementKeys', () => {
+    const parsed = parseBackupPayload(
+      JSON.stringify({
+        tasks: [{ id: 'task-1' }],
+        classes: [{ id: 'class-1', students: [] }],
+        collections: [{ id: 'collection-1', collection: {}, students: [] }],
+        templates: [{ id: 'template-1', title: '안내', body: '', tags: [], replacementKeys: 'oops' }],
+      }),
+    )
+
+    expect(parsed.ok).toBe(false)
+    if (parsed.ok) {
+      return
+    }
+
+    expect(parsed.error).toContain('템플릿 항목은 tags 및 replacementKeys를 배열로 포함해야 합니다.')
+  })
+
   it('builds a date-based backup filename', () => {
     expect(createBackupFilename(new Date('2026-06-07T10:00:00Z'))).toBe(
       'homeroom-admin-hub-backup-2026-06-07.json',

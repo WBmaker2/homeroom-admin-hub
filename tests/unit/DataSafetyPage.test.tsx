@@ -113,8 +113,9 @@ const createRecordsState = <T,>(
   records: T[],
   setRecords: ReturnType<typeof vi.fn>,
   usingFirestore = false,
+  error = '',
 ): UseUserRecordsState => ({
-  error: '',
+  error,
   loading: false,
   records,
   setRecords,
@@ -233,6 +234,51 @@ describe('DataSafetyPage and route/nav visibility', () => {
     expect(setTemplates).toHaveBeenCalledWith(importPayload.templates)
   })
 
+  it('shows restore success and clears import text after all stores are persisted', async () => {
+    const importPayload = {
+      tasks: [makeTask('import-task')],
+      classes: [makeClass('class-import')],
+      collections: [makeCollection('collection-import')],
+      templates: [makeTemplate('template-import')],
+    }
+    const setTasks = vi.fn().mockResolvedValue(undefined)
+    const setClasses = vi.fn().mockResolvedValue(undefined)
+    const setCollections = vi.fn().mockResolvedValue(undefined)
+    const setTemplates = vi.fn().mockResolvedValue(undefined)
+
+    vi.spyOn(userRecordsModule, 'useUserRecords').mockImplementation((input: { collectionName: string }) => {
+      switch (input.collectionName) {
+        case 'tasks':
+          return createRecordsState<TaskItem>([], setTasks)
+        case 'classes':
+          return createRecordsState<ClassRecord>([], setClasses)
+        case 'collections':
+          return createRecordsState<CollectionWithStudents>([], setCollections)
+        case 'templates':
+          return createRecordsState<TemplateItem>([], setTemplates)
+        default:
+          throw new Error(`Unexpected collection name: ${input.collectionName}`)
+      }
+    })
+
+    const user = userEventSetup()
+    render(<DataSafetyPage />)
+
+    const importBox = screen.getByRole('textbox', { name: '백업 JSON 붙여넣기' })
+    fireEvent.change(importBox, { target: { value: JSON.stringify(importPayload) } })
+    const importButton = screen.getByRole('button', { name: '데이터 복원' })
+
+    await user.click(importButton)
+
+    await screen.findByText('백업 데이터를 복원했습니다.')
+
+    expect(importBox).toHaveValue('')
+    expect(setTasks).toHaveBeenCalledWith(importPayload.tasks)
+    expect(setClasses).toHaveBeenCalledWith(importPayload.classes)
+    expect(setCollections).toHaveBeenCalledWith(importPayload.collections)
+    expect(setTemplates).toHaveBeenCalledWith(importPayload.templates)
+  })
+
   it('clears only selected groups when 삭제 확인이 입력되고 버튼이 활성화됨', async () => {
     const setTasks = vi.fn()
     const setClasses = vi.fn()
@@ -269,6 +315,35 @@ describe('DataSafetyPage and route/nav visibility', () => {
     expect(setCollections).not.toHaveBeenCalledWith([])
   })
 
+  it('disables export/import/reset actions when any store has error', () => {
+    const setTasks = vi.fn()
+    const setClasses = vi.fn()
+    const setCollections = vi.fn()
+    const setTemplates = vi.fn()
+
+    vi.spyOn(userRecordsModule, 'useUserRecords').mockImplementation((input: { collectionName: string }) => {
+      switch (input.collectionName) {
+        case 'tasks':
+          return createRecordsState<TaskItem>([], setTasks, false, '저장소 장애')
+        case 'classes':
+          return createRecordsState<ClassRecord>([], setClasses)
+        case 'collections':
+          return createRecordsState<CollectionWithStudents>([], setCollections)
+        case 'templates':
+          return createRecordsState<TemplateItem>([], setTemplates)
+        default:
+          throw new Error(`Unexpected collection name: ${input.collectionName}`)
+      }
+    })
+
+    render(<DataSafetyPage />)
+
+    expect(screen.getByRole('button', { name: 'JSON 복사' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'JSON 파일로 저장' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '데이터 복원' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '선택 항목 삭제' })).toBeDisabled()
+  })
+
   it('does not run import without valid parsed payload', async () => {
     const setTasks = vi.fn()
     const setClasses = vi.fn()
@@ -298,10 +373,10 @@ describe('DataSafetyPage and route/nav visibility', () => {
 
     const importButton = screen.getByRole('button', { name: '데이터 복원' })
     expect(importButton).toBeDisabled()
-    expect(await screen.findByText('다음 그룹이 비어있거나 배열이 아닙니다: collections, templates')).toBeInTheDocument()
+    expect(await screen.findByText((content) => content.includes('collections 그룹이 배열이 아닙니다.'))).toBeInTheDocument()
     await user.click(importButton)
 
-    expect(screen.getByRole('alert')).toHaveTextContent('다음 그룹이 비어있거나 배열이 아닙니다: collections, templates')
+    expect(screen.getByRole('alert')).toHaveTextContent('collections 그룹이 배열이 아닙니다.')
     expect(setTasks).not.toHaveBeenCalled()
     expect(setClasses).not.toHaveBeenCalled()
     expect(setCollections).not.toHaveBeenCalled()

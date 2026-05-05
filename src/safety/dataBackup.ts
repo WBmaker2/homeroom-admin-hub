@@ -24,8 +24,32 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-const hasArrayGroup = (data: Record<string, unknown>, key: keyof DataSafetyPayload): boolean => {
-  return key in data && Array.isArray(data[key])
+const hasValidId = (value: unknown): value is { id: string } => {
+  return isObjectRecord(value) && typeof value.id === 'string' && value.id.trim().length > 0
+}
+
+const validateRecords = (groupName: string, value: unknown, label: string): string | null => {
+  if (!Array.isArray(value)) {
+    return `${groupName} 그룹이 배열이 아닙니다.`
+  }
+
+  const hasInvalidItem = value.some((item) => !hasValidId(item))
+
+  if (hasInvalidItem) {
+    return `${groupName}의 각 항목에 id 문자열이 필요합니다.`
+  }
+
+  if (label === 'templates') {
+    const hasInvalidTemplate = value.some(
+      (item) => !Array.isArray((item as { tags?: unknown }).tags) || !Array.isArray((item as { replacementKeys?: unknown }).replacementKeys),
+    )
+
+    if (hasInvalidTemplate) {
+      return '템플릿 항목은 tags 및 replacementKeys를 배열로 포함해야 합니다.'
+    }
+  }
+
+  return null
 }
 
 export const createBackupPayload = (
@@ -53,14 +77,21 @@ export const parseBackupPayload = (value: string): ParseResult => {
       return { ok: false, error: '백업 데이터는 객체 형식이어야 합니다.' }
     }
 
-    const missing = ['tasks', 'classes', 'collections', 'templates'].filter((key) => {
-      return !hasArrayGroup(parsed, key as keyof DataSafetyPayload)
-    })
+    const groups: Array<'tasks' | 'classes' | 'collections' | 'templates'> = [
+      'tasks',
+      'classes',
+      'collections',
+      'templates',
+    ]
 
-    if (missing.length > 0) {
+    const errors = groups
+      .map((group) => validateRecords(group, parsed[group], group))
+      .filter((error): error is string => Boolean(error))
+
+    if (errors.length > 0) {
       return {
         ok: false,
-        error: `다음 그룹이 비어있거나 배열이 아닙니다: ${missing.join(', ')}`,
+        error: errors.join(' '),
       }
     }
 

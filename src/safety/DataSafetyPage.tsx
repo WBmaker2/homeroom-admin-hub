@@ -92,6 +92,7 @@ export function DataSafetyPage() {
 
   const isLoading = tasksLoading || classesLoading || collectionsLoading || templatesLoading
   const hasError = tasksError || classesError || collectionsError || templatesError
+  const hasStoreError = Boolean(hasError)
 
   const storageMode = [
     tasksUsingFirestore,
@@ -107,6 +108,7 @@ export function DataSafetyPage() {
 
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const [importText, setImportText] = useState('')
+  const [isApplying, setIsApplying] = useState(false)
   const importParse = useMemo(() => {
     if (!importText.trim()) {
       return { parsed: null, error: '' }
@@ -153,6 +155,8 @@ export function DataSafetyPage() {
     return Object.values(selectedGroups).filter(Boolean).length
   }, [selectedGroups])
 
+  const isBusy = isLoading || hasStoreError || isApplying
+
   const handleCopyPreview = async () => {
     if (!isClipboardSupported()) {
       setFeedback({
@@ -189,18 +193,29 @@ export function DataSafetyPage() {
     setFeedback({ kind: 'status', text: '백업 파일 다운로드를 시작했습니다.' })
   }
 
-  const handleImportApply = () => {
+  const handleImportApply = async () => {
     if (!importParsed) {
       setFeedback({ kind: 'alert', text: '유효한 백업 데이터가 없습니다.' })
       return
     }
 
-    setTasks(importParsed.tasks)
-    setClasses(importParsed.classes)
-    setCollections(importParsed.collections)
-    setTemplates(importParsed.templates)
-    setFeedback({ kind: 'status', text: '백업 데이터를 복원했습니다.' })
-    setImportText('')
+    setIsApplying(true)
+
+    try {
+      await Promise.all([
+        setTasks(importParsed.tasks),
+        setClasses(importParsed.classes),
+        setCollections(importParsed.collections),
+        setTemplates(importParsed.templates),
+      ])
+
+      setFeedback({ kind: 'status', text: '백업 데이터를 복원했습니다.' })
+      setImportText('')
+    } catch {
+      setFeedback({ kind: 'alert', text: '백업 데이터 복원 중 저장 오류가 발생했습니다.' })
+    } finally {
+      setIsApplying(false)
+    }
   }
 
   const handleSelectionChange = (key: BackupGroupKey, checked: boolean) => {
@@ -210,34 +225,45 @@ export function DataSafetyPage() {
     }))
   }
 
-  const handleClearSelected = () => {
+  const handleClearSelected = async () => {
     if (deleteConfirmText !== '삭제' || selectedCount === 0) {
       return
     }
 
-    if (selectedGroups.tasks) {
-      setTasks([])
+    setIsApplying(true)
+
+    try {
+      const operations: Promise<unknown>[] = []
+
+      if (selectedGroups.tasks) {
+        operations.push(setTasks([]))
+      }
+
+      if (selectedGroups.classes) {
+        operations.push(setClasses([]))
+      }
+
+      if (selectedGroups.collections) {
+        operations.push(setCollections([]))
+      }
+
+      if (selectedGroups.templates) {
+        operations.push(setTemplates([]))
+      }
+
+      await Promise.all(operations)
+
+      setSelectedGroups(initialSelections)
+      setDeleteConfirmText('')
+      setFeedback({
+        kind: 'status',
+        text: `${selectedCount}개 그룹 데이터가 초기화되었습니다.`,
+      })
+    } catch {
+      setFeedback({ kind: 'alert', text: '선택 항목 초기화 중 저장 오류가 발생했습니다.' })
+    } finally {
+      setIsApplying(false)
     }
-
-    if (selectedGroups.classes) {
-      setClasses([])
-    }
-
-    if (selectedGroups.collections) {
-      setCollections([])
-    }
-
-    if (selectedGroups.templates) {
-      setTemplates([])
-    }
-
-    setSelectedGroups(initialSelections)
-
-    setDeleteConfirmText('')
-    setFeedback({
-      kind: 'status',
-      text: `${selectedCount}개 그룹 데이터가 초기화되었습니다.`,
-    })
   }
 
   const canClear = deleteConfirmText === '삭제' && selectedCount > 0
@@ -247,7 +273,7 @@ export function DataSafetyPage() {
       <h1>데이터 안전</h1>
 
       {isLoading ? <p className="safety-status" role="status" aria-live="polite">데이터를 불러오는 중입니다.</p> : null}
-      {hasError ? <p className="safety-feedback safety-feedback-alert" role="alert">데이터 저장소에 문제가 있습니다. 저장 후 다시 확인해 주세요.</p> : null}
+      {hasStoreError ? <p className="safety-feedback safety-feedback-alert" role="alert">데이터 저장소에 문제가 있습니다. 저장 후 다시 확인해 주세요.</p> : null}
 
       <section className="safety-section" aria-label="데이터 백업/내보내기">
         <h2>백업</h2>
@@ -264,10 +290,10 @@ export function DataSafetyPage() {
           aria-label="백업 JSON 미리보기"
         />
         <div className="safety-actions">
-          <button type="button" onClick={handleCopyPreview} disabled={isLoading}>
+          <button type="button" onClick={handleCopyPreview} disabled={isBusy}>
             JSON 복사
           </button>
-          <button type="button" onClick={handleExport} disabled={isLoading}>
+          <button type="button" onClick={handleExport} disabled={isBusy}>
             JSON 파일로 저장
           </button>
         </div>
@@ -297,7 +323,7 @@ export function DataSafetyPage() {
         <button
           type="button"
           onClick={handleImportApply}
-          disabled={!hasReadyImport || isLoading}
+          disabled={!hasReadyImport || isBusy}
         >
           데이터 복원
         </button>
@@ -336,7 +362,7 @@ export function DataSafetyPage() {
           aria-label="삭제 확인 입력"
         />
 
-        <button type="button" onClick={handleClearSelected} disabled={!canClear || isLoading}>
+        <button type="button" onClick={handleClearSelected} disabled={!canClear || isBusy}>
           선택 항목 삭제
         </button>
       </section>

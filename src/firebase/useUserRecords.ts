@@ -88,13 +88,12 @@ export function useUserRecords<T extends RecordWithId>({
   }, [collectionName, userId, usingFirestore])
 
   const persistRecords = useCallback(
-    (nextRecords: T[]) => {
+    async (nextRecords: T[]): Promise<T[]> => {
       const normalized = cloneRecords(nextRecords)
+      setError('')
 
       if (usingFirestore && userId) {
-        void replaceUserRecords(userId, collectionName, normalized).catch((saveError: unknown) => {
-          setError(toErrorMessage(saveError))
-        })
+        await replaceUserRecords(userId, collectionName, normalized)
         return normalized
       }
 
@@ -105,15 +104,21 @@ export function useUserRecords<T extends RecordWithId>({
   )
 
   const setRecords = useCallback(
-    (nextRecordsOrUpdater: T[] | ((current: T[]) => T[])): T[] => {
+    async (nextRecordsOrUpdater: T[] | ((current: T[]) => T[])): Promise<T[]> => {
       const nextRecords =
         typeof nextRecordsOrUpdater === 'function'
           ? nextRecordsOrUpdater(cloneRecords(recordsRef.current))
           : nextRecordsOrUpdater
-      const saved = persistRecords(nextRecords)
-      recordsRef.current = saved
-      setRecordsState(saved)
-      return saved
+
+      try {
+        const saved = await persistRecords(nextRecords)
+        recordsRef.current = saved
+        setRecordsState(saved)
+        return saved
+      } catch (error: unknown) {
+        setError(toErrorMessage(error))
+        throw error
+      }
     },
     [persistRecords],
   )

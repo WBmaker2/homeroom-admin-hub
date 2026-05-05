@@ -4,7 +4,6 @@ import { TemplateEditor, type TemplateFeedback } from './TemplateEditor'
 import * as templateService from './templateService'
 import type { TemplateItem } from '../types/domain'
 import './TemplatesPage.css'
-import { getDemoTemplates } from '../firebase/seedDemoData'
 import { useUserRecords } from '../firebase/useUserRecords'
 
 const formatLastUsedDate = (value: string | null): string => {
@@ -79,14 +78,14 @@ export function TemplatesPage() {
     getInitialRecords: templateService.getTemplateStore,
     onSaveLocal: templateService.saveTemplateStore,
   })
-  const seedTemplates = getDemoTemplates()
+  const initialTemplate = templateService.getTemplateStore()[0] ?? null
 
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(() =>
-    intentCreate ? null : seedTemplates[0]?.id ?? null,
+    intentCreate ? null : initialTemplate?.id ?? null,
   )
-  const [isCreateMode, setIsCreateMode] = useState<boolean>(intentCreate || seedTemplates.length === 0)
+  const [isCreateMode, setIsCreateMode] = useState<boolean>(intentCreate || !initialTemplate)
   const [draftTemplate, setDraftTemplate] = useState<TemplateItem>(() =>
-    intentCreate ? createBlankTemplate() : cloneTemplate(seedTemplates[0] ?? createBlankTemplate()),
+    intentCreate || !initialTemplate ? createBlankTemplate() : cloneTemplate(initialTemplate),
   )
   const [replacementValues, setReplacementValues] = useState<Record<string, string>>(
     createEmptyReplacementValues,
@@ -103,18 +102,22 @@ export function TemplatesPage() {
     let active = true
 
     if (templates.length === 0) {
+      if (!active) return
+
       void Promise.resolve().then(() => {
         if (!active) return
         setIsCreateMode(true)
         setSelectedTemplateId(null)
         setDraftTemplate(createBlankTemplate(userId ?? 'user-demo'))
       })
+
       return () => {
         active = false
       }
     }
 
     if (!selectedTemplateId || !templates.some((template) => template.id === selectedTemplateId)) {
+      if (!active) return
       void Promise.resolve().then(() => {
         if (!active) return
         setIsCreateMode(false)
