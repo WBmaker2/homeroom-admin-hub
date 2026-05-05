@@ -413,7 +413,7 @@ export function TaskListPage() {
   const selectedTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : null;
 
   const handleComplete = (taskId: string) => {
-    setStoredTasks((current) =>
+    void setStoredTasks((current) =>
       (current.length > 0 ? current : tasks).map((task) =>
         task.id === taskId && task.status !== 'DONE' && task.status !== 'ARCHIVED'
           ? {
@@ -423,11 +423,13 @@ export function TaskListPage() {
             }
           : task,
       ),
-    );
+    ).catch(() => {
+      setFormMessage('업무 상태를 저장하지 못했습니다. 다시 시도해 주세요.');
+    });
   };
 
   const handleTaskPatch = (taskId: string, patch: TaskPatch) => {
-    setStoredTasks((current) => {
+    void setStoredTasks((current) => {
       const source = current.length > 0 ? current : tasks;
       return source.map((task) =>
         task.id === taskId
@@ -438,8 +440,11 @@ export function TaskListPage() {
             }
           : task,
       );
+    }).then(() => {
+      setFormMessage('업무 상세가 저장되었습니다.');
+    }).catch(() => {
+      setFormMessage('업무 상세를 저장하지 못했습니다. 다시 시도해 주세요.');
     });
-    setFormMessage('업무 상세가 저장되었습니다.');
   };
 
   const createDraftTask = (
@@ -479,13 +484,15 @@ export function TaskListPage() {
       submissionTarget: payload.submissionTarget,
     });
 
-    setStoredTasks((current) => {
+    void setStoredTasks((current) => {
       const currentOrSeed = current.length > 0 || usingFirestore ? current : baseTasks;
       return [...currentOrSeed, nextTask];
+    }).then(() => {
+      setFormMessage(`${getCreateModeLabel(mode)} 항목이 생성되었습니다.`);
+      setSearchParams({}, { replace: true });
+    }).catch(() => {
+      setFormMessage(`${getCreateModeLabel(mode)} 항목을 저장하지 못했습니다. 다시 시도해 주세요.`);
     });
-
-    setFormMessage(`${getCreateModeLabel(mode)} 항목이 생성되었습니다.`);
-    setSearchParams({}, { replace: true });
   };
 
   return (

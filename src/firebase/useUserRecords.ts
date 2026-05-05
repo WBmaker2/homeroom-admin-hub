@@ -41,6 +41,7 @@ export function useUserRecords<T extends RecordWithId>({
   const [loading, setLoading] = useState(usingFirestore)
   const [error, setError] = useState('')
   const recordsRef = useRef(records)
+  const writeQueueRef = useRef<Promise<unknown>>(Promise.resolve())
 
   useEffect(() => {
     recordsRef.current = records
@@ -104,21 +105,31 @@ export function useUserRecords<T extends RecordWithId>({
   )
 
   const setRecords = useCallback(
-    async (nextRecordsOrUpdater: T[] | ((current: T[]) => T[])): Promise<T[]> => {
-      const nextRecords =
-        typeof nextRecordsOrUpdater === 'function'
-          ? nextRecordsOrUpdater(cloneRecords(recordsRef.current))
-          : nextRecordsOrUpdater
+    (nextRecordsOrUpdater: T[] | ((current: T[]) => T[])): Promise<T[]> => {
+      const operation = writeQueueRef.current
+        .catch(() => undefined)
+        .then(async () => {
+          const nextRecords =
+            typeof nextRecordsOrUpdater === 'function'
+              ? nextRecordsOrUpdater(cloneRecords(recordsRef.current))
+              : nextRecordsOrUpdater
 
-      try {
-        const saved = await persistRecords(nextRecords)
-        recordsRef.current = saved
-        setRecordsState(saved)
-        return saved
-      } catch (error: unknown) {
-        setError(toErrorMessage(error))
-        throw error
-      }
+          try {
+            const saved = await persistRecords(nextRecords)
+            recordsRef.current = saved
+            setRecordsState(saved)
+            return saved
+          } catch (error: unknown) {
+            setError(toErrorMessage(error))
+            throw error
+          }
+        })
+
+      writeQueueRef.current = operation.then(
+        () => undefined,
+        () => undefined,
+      )
+      return operation
     },
     [persistRecords],
   )

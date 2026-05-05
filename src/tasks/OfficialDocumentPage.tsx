@@ -97,13 +97,16 @@ function OfficialDocumentPageInner({ taskId }: OfficialPageProps) {
       : [...tasks, updated]
 
     setDraftTask(updated)
-    setTasks(nextTasks)
-
-    setStatusInfo(
-      updated.status === 'DONE'
-        ? '완료로 변경했습니다. 긴급 섹션에서 즉시 제외됩니다.'
-        : `현재 상태: ${statusLabel[updated.status]}`,
-    )
+    setStatusInfo('저장 중입니다.')
+    void setTasks(nextTasks).then(() => {
+      setStatusInfo(
+        updated.status === 'DONE'
+          ? '완료로 변경했습니다. 긴급 섹션에서 즉시 제외됩니다.'
+          : `현재 상태: ${statusLabel[updated.status]}`,
+      )
+    }).catch(() => {
+      setStatusInfo('공문 상태를 저장하지 못했습니다. 다시 시도해 주세요.')
+    })
   }
 
   const applyOfficialDelete = (mode: 'KEEP' | 'WITH_COLLECTIONS') => {
