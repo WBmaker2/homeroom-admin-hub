@@ -1,7 +1,9 @@
 import { type MouseEvent, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useUserRecords } from '../firebase/useUserRecords'
 import type { TaskItem, TaskType } from '../types/domain'
+import { getTaskStore, saveTaskStore } from '../tasks/taskService'
 import { addDaysToLocalDateString, toLocalDateString } from '../utils/dates'
 import {
   getMonthGrid,
@@ -88,7 +90,20 @@ export function CalendarPage() {
   const [view, setView] = useState<CalendarView>('month')
   const [anchorDate, setAnchorDate] = useState<string>(today)
   const [selectedDate, setSelectedDate] = useState<string>(today)
-  const tasks = useMemo<TaskItem[]>(() => seededTasks(), [])
+  const { records: storedTasks, loading, error, usingFirestore } = useUserRecords<TaskItem>({
+    collectionName: 'tasks',
+    getInitialRecords: getTaskStore,
+    onSaveLocal: saveTaskStore,
+  })
+
+  const tasks = useMemo<TaskItem[]>(() => {
+    if (usingFirestore) {
+      return storedTasks
+    }
+
+    return storedTasks.length > 0 ? storedTasks : seededTasks()
+  }, [storedTasks, usingFirestore])
+
   const events = useMemo(() => mapTasksToCalendarEvents(tasks), [tasks])
   const eventsByDate = useMemo(() => groupEventsByDate(events), [events])
   const visibleDays = useMemo(
@@ -136,6 +151,24 @@ export function CalendarPage() {
   ) => {
     event.preventDefault()
     changeAnchor(direction)
+  }
+
+  if (loading) {
+    return (
+      <div className="calendar-page" role="status" aria-live="polite">
+        <p className="calendar-feedback">캘린더 업무를 불러오는 중입니다.</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="calendar-page">
+        <p role="alert" className="calendar-feedback calendar-feedback-alert">
+          캘린더 업무를 불러오지 못했습니다: {error}
+        </p>
+      </div>
+    )
   }
 
   return (
