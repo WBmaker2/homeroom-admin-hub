@@ -4,6 +4,9 @@ import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TemplatesPage } from '../../src/templates/TemplatesPage'
 import * as templateService from '../../src/templates/templateService'
+import { getDemoTemplates } from '../../src/firebase/seedDemoData'
+
+const seedTemplate = getDemoTemplates()[0]
 
 const formatLastUsedDate = (value: string): string =>
   new Intl.DateTimeFormat('ko-KR', {
@@ -25,6 +28,7 @@ const getFirstTemplateButton = () => {
 describe('TemplatesPage clipboard interactions', () => {
   beforeEach(() => {
     vi.useRealTimers()
+    vi.spyOn(templateService, 'getTemplateStore').mockReturnValue([seedTemplate])
   })
 
   afterEach(() => {
@@ -50,7 +54,7 @@ describe('TemplatesPage clipboard interactions', () => {
 
   it('shows alert if clipboard writeText rejects and keeps unsaved edits without changing last used date', async () => {
     vi.spyOn(templateService, 'isClipboardWriteAvailable').mockReturnValue(true)
-    const writeTextToClipboard = vi
+    const writeText = vi
       .spyOn(templateService, 'writeTextToClipboard')
       .mockRejectedValue(new Error('clipboard denied'))
     const user = userEvent.setup()
@@ -71,7 +75,7 @@ describe('TemplatesPage clipboard interactions', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('클립보드 복사 중 문제가 발생했습니다.')
     expect(firstTemplateButton.textContent ?? '').toContain(initialLastUsed)
-    expect(writeTextToClipboard).toHaveBeenCalledTimes(1)
+    expect(writeText).toHaveBeenCalledTimes(1)
     expect(screen.getByLabelText('제목')).toHaveValue('임시 제목 편집')
   })
 

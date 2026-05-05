@@ -110,4 +110,9 @@ test('app routes without auth should redirect unless demo mode keeps app access'
     await expectNoAuthRedirectInDemoMode(page, '/app/templates', '템플릿')
     await expectNoFileInputs(page)
   })
+
+  await withCleanConsoleAndPageErrors(page, async () => {
+    await expectNoAuthRedirectInDemoMode(page, '/app/safety', '데이터 안전')
+    await expectNoFileInputs(page)
+  })
 })

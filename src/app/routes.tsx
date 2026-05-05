@@ -13,6 +13,7 @@ import { InboxPage } from '../inbox/InboxPage';
 import { TaskListPage } from '../tasks/TaskListPage';
 import { TemplatesPage } from '../templates/TemplatesPage';
 import { CalendarPage } from '../calendar/CalendarPage';
+import { DataSafetyPage } from '../safety/DataSafetyPage';
 
 function PublicOnlyRoute({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -63,6 +64,7 @@ export function AppRoutes() {
           <Route path="collections/:collectionId" element={<CollectionDetailPage />} />
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="calendar" element={<CalendarPage />} />
+          <Route path="safety" element={<DataSafetyPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -76,7 +76,8 @@ export function TemplatesPage() {
     usingFirestore,
   } = useUserRecords<TemplateItem>({
     collectionName: 'templates',
-    getInitialRecords: getDemoTemplates,
+    getInitialRecords: templateService.getTemplateStore,
+    onSaveLocal: templateService.saveTemplateStore,
   })
   const seedTemplates = getDemoTemplates()
 

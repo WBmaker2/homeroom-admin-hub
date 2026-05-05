@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   extractTemplateReplacementKeys,
   interpolateTemplate,
+  getTemplateStore,
+  saveTemplateStore,
   touchTemplateLastUsedAt,
 } from '../../src/templates/templateService'
 import type { TemplateItem } from '../../src/types/domain'
+import { getDemoTemplates } from '../../src/firebase/seedDemoData'
 
 
 const baseTemplate = ({
@@ -77,5 +80,63 @@ describe('touchTemplateLastUsedAt', () => {
       lastUsedAt: fixedNow,
       updatedAt: fixedNow,
     })
+  })
+})
+
+describe('template local store helpers', () => {
+  const keyPrefix = 'homeroom-demo-templates-v1'
+
+  const seedTemplate = getDemoTemplates()[0]
+
+  const setupWindowLocalStorage = () => {
+    const store: Record<string, string> = {}
+    Object.defineProperty(window, 'localStorage', {
+      value: {
+        getItem: vi.fn((key: string) => store[key] ?? null),
+        setItem: vi.fn((key: string, value: string) => {
+          store[key] = value
+        }),
+        removeItem: vi.fn((key: string) => {
+          delete store[key]
+        }),
+        clear: vi.fn(() => {
+          Object.keys(store).forEach((key) => {
+            delete store[key]
+          })
+        }),
+        key: vi.fn((index: number) => Object.keys(store)[index] ?? null),
+        get length() {
+          return Object.keys(store).length
+        },
+      },
+      configurable: true,
+    })
+  }
+
+  beforeEach(() => {
+    setupWindowLocalStorage()
+    saveTemplateStore([])
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+    vi.restoreAllMocks()
+  })
+
+  it('returns empty array when no stored templates exist', () => {
+    expect(getTemplateStore()).toEqual([])
+  })
+
+  it('persists templates to localStorage and reads them back', () => {
+    const setItemSpy = vi.spyOn(window.localStorage, 'setItem')
+
+    saveTemplateStore([seedTemplate])
+    expect(setItemSpy).toHaveBeenCalledWith(
+      keyPrefix,
+      JSON.stringify([seedTemplate]),
+    )
+
+    const loaded = getTemplateStore()
+    expect(loaded).toEqual([seedTemplate])
   })
 })

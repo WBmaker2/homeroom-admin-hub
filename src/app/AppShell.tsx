@@ -1,5 +1,14 @@
 import { type ReactNode } from 'react';
-import { CalendarDays, ClipboardCheck, Copy, FileText, Inbox, ListChecks, Users } from 'lucide-react';
+import {
+  CalendarDays,
+  ClipboardCheck,
+  Copy,
+  FileText,
+  Inbox,
+  ListChecks,
+  ShieldCheck,
+  Users,
+} from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { getRuntimeModeDescription, getRuntimeModeLabel, isDemoAuthMode } from '../firebase/environment';
@@ -49,6 +58,12 @@ const navItems = [
     to: '/app/classes',
     label: '학급 명부',
     icon: Users,
+    end: false,
+  },
+  {
+    to: '/app/safety',
+    label: '데이터 안전',
+    icon: ShieldCheck,
     end: false,
   },
 ] as const;

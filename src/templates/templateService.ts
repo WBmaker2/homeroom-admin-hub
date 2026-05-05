@@ -1,4 +1,5 @@
 import type { TemplateItem } from '../types/domain'
+import { getDemoTemplates, isDemoAuthMode } from '../firebase/seedDemoData'
 
 export const TEMPLATE_REPLACEMENT_KEYS = [
   '학급',
@@ -10,12 +11,87 @@ export const TEMPLATE_REPLACEMENT_KEYS = [
 
 type SupportedTemplateReplacementKey = (typeof TEMPLATE_REPLACEMENT_KEYS)[number]
 
+const TEMPLATE_STORE_KEY = 'homeroom-demo-templates-v1'
+
+const canUseBrowserStorage = (): boolean => {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.localStorage !== 'undefined' &&
+    typeof window.localStorage.getItem === 'function' &&
+    typeof window.localStorage.setItem === 'function'
+  )
+}
+
+const normalizeTemplateStore = (templates: TemplateItem[]): TemplateItem[] =>
+  templates
+    .filter((template): template is TemplateItem => Boolean(template?.id))
+    .map((template) => ({
+      ...template,
+      tags: [...template.tags],
+      replacementKeys: [...template.replacementKeys],
+    }))
+
+const parseStoredTemplates = (): TemplateItem[] | null => {
+  if (!canUseBrowserStorage()) {
+    return null
+  }
+
+  try {
+    const raw = window.localStorage.getItem(TEMPLATE_STORE_KEY)
+    if (!raw) {
+      return null
+    }
+
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) {
+      return null
+    }
+
+    return normalizeTemplateStore(parsed)
+  } catch {
+    return null
+  }
+}
+
+let templateStore: TemplateItem[] | null = null
+
 export const isClipboardWriteAvailable = () => {
   return (
     typeof navigator !== 'undefined' &&
     Boolean(navigator.clipboard) &&
     typeof navigator.clipboard.writeText === 'function'
   )
+}
+
+export const getTemplateStore = (): TemplateItem[] => {
+  if (templateStore !== null) {
+    return normalizeTemplateStore(templateStore)
+  }
+
+  const stored = parseStoredTemplates()
+  if (stored !== null) {
+    templateStore = stored
+    return normalizeTemplateStore(templateStore)
+  }
+
+  if (isDemoAuthMode()) {
+    templateStore = getDemoTemplates()
+    return normalizeTemplateStore(templateStore)
+  }
+
+  templateStore = []
+  return []
+}
+
+export const saveTemplateStore = (templates: TemplateItem[]): TemplateItem[] => {
+  const normalized = normalizeTemplateStore(templates)
+  templateStore = normalized
+
+  if (canUseBrowserStorage()) {
+    window.localStorage.setItem(TEMPLATE_STORE_KEY, JSON.stringify(normalized))
+  }
+
+  return normalizeTemplateStore(normalized)
 }
 
 export const writeTextToClipboard = async (text: string): Promise<void> => {

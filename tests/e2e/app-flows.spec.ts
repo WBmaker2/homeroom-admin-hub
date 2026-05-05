@@ -144,6 +144,7 @@ test('파일 저장 제외 흐름', async ({ page }) => {
     '/app/classes',
     '/app/calendar',
     '/app/templates',
+    '/app/safety',
   ]
 
   for (const route of routes) {

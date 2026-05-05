@@ -1,0 +1,137 @@
+.safety-page {
+  display: grid;
+  gap: 12px;
+  padding: 10px 14px;
+}
+
+.safety-section {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.safety-section h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.safety-mode {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.safety-label {
+  font-size: 13px;
+  color: var(--color-foreground);
+  font-weight: 600;
+}
+
+.safety-textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 8px;
+  min-height: 140px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.safety-textarea--preview {
+  min-height: 210px;
+}
+
+.safety-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.safety-actions button,
+.safety-section > button,
+.safety-section button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 8px 12px;
+  background: #ffffff;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.safety-actions button:hover:not(:disabled),
+.safety-section button:hover:not(:disabled) {
+  border-color: var(--color-accent);
+}
+
+.safety-actions button:disabled,
+.safety-section button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.safety-checklist {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  margin: 0;
+  padding: 8px;
+  display: grid;
+  gap: 8px;
+}
+
+.safety-checklist legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.safety-checklist-item {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.safety-input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.safety-note,
+.safety-feedback {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.safety-feedback {
+  color: #0f172a;
+}
+
+.safety-feedback-alert {
+  color: #b91c1c;
+}
+
+.safety-feedback-status {
+  color: #166534;
+}
+
+@media (max-width: 860px) {
+  .safety-page {
+    gap: 10px;
+  }
+
+  .safety-textarea {
+    min-height: 150px;
+  }
+}
+
