@@ -1,11 +1,13 @@
 .inbox-view {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .inbox-page-title {
   margin: 0;
   font-size: 24px;
+  min-width: 0;
 }
 
 .inbox-quick-actions {
@@ -13,6 +15,7 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: stretch;
 }
 
 .inbox-quick-action {
@@ -22,6 +25,8 @@
   color: #1b61c9;
   text-decoration: none;
   background: var(--color-surface);
+  min-width: 0;
+  width: fit-content;
 }
 
 .inbox-sections {
@@ -49,4 +54,18 @@
 .inbox-empty {
   margin: 12px 0;
   color: var(--color-muted);
+}
+
+@media (max-width: 640px) {
+  .inbox-page-title {
+    font-size: 22px;
+  }
+
+  .inbox-section-title {
+    font-size: 16px;
+  }
+
+  .inbox-quick-action {
+    width: 100%;
+  }
 }

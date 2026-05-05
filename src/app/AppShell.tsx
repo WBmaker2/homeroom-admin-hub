@@ -83,8 +83,9 @@ export function AppShell({ children }: AppShellProps) {
       <style>{`
         .app-shell {
           min-height: 100vh;
+          min-width: 0;
           display: grid;
-          grid-template-columns: 260px 1fr;
+          grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
           background: var(--color-background);
         }
         .app-shell-sidebar {
@@ -120,6 +121,10 @@ export function AppShell({ children }: AppShellProps) {
           padding: 10px;
           font-size: 12px;
           line-height: 1.45;
+          overflow-wrap: anywhere;
+        }
+        .app-shell-privacy-notice {
+          overflow-wrap: anywhere;
         }
         .app-shell-mode-note strong {
           display: block;
@@ -161,6 +166,8 @@ export function AppShell({ children }: AppShellProps) {
         }
         .app-shell-main {
           padding: var(--space-page);
+          min-width: 0;
+          overflow-x: hidden;
         }
         .app-shell-signout {
           margin-top: auto;
@@ -180,7 +187,8 @@ export function AppShell({ children }: AppShellProps) {
             display: none;
           }
           .app-shell-main {
-            padding-bottom: calc(98px + env(safe-area-inset-bottom));
+            min-width: 0;
+            padding: 14px 12px calc(120px + env(safe-area-inset-bottom)) 12px;
           }
           .app-shell-mobile-nav {
             position: fixed;
@@ -203,6 +211,8 @@ export function AppShell({ children }: AppShellProps) {
           }
           .app-shell-mobile-item,
           .app-shell-logout {
+            min-width: 0;
+            width: fit-content;
             border: 1px solid var(--color-border);
             border-radius: var(--radius-control);
             background: var(--color-background);
@@ -216,6 +226,9 @@ export function AppShell({ children }: AppShellProps) {
             gap: 6px;
             font-weight: 600;
             font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
           }
           .app-shell-mobile-links .app-shell-nav-item-active {
             border-color: var(--color-accent);
@@ -267,14 +280,14 @@ export function AppShell({ children }: AppShellProps) {
           {navItems.map((item) => {
             const Icon = item.icon;
             return (
-                <NavLink
-                  to={item.to}
-                  key={item.to}
-                  className={({ isActive }) =>
-                    `app-shell-mobile-item${isActive ? ' app-shell-nav-item-active' : ''}`
-                  }
-                  end={item.end}
-                >
+              <NavLink
+                to={item.to}
+                key={item.to}
+                className={({ isActive }) =>
+                  `app-shell-mobile-item${isActive ? ' app-shell-nav-item-active' : ''}`
+                }
+                end={item.end}
+              >
                 <Icon size={16} aria-hidden="true" />
                 <span>{item.label}</span>
               </NavLink>

@@ -2,6 +2,8 @@
   display: grid;
   gap: 12px;
   max-width: 1100px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .calendar-controls {
@@ -114,6 +116,8 @@
   align-content: start;
   gap: 6px;
   text-align: left;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .calendar-day:hover {
@@ -173,6 +177,7 @@
   display: grid;
   gap: 4px;
   text-align: left;
+  min-width: 0;
 }
 
 .calendar-event-item {
@@ -183,6 +188,7 @@
   display: grid;
   gap: 2px;
   font-size: 12px;
+  min-width: 0;
 }
 
 .calendar-event-label,
@@ -244,6 +250,7 @@
   padding: 12px;
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .calendar-selected h2 {
@@ -332,6 +339,20 @@
   .calendar-day {
     min-height: 94px;
   }
+
+  .calendar-view-switch,
+  .calendar-navigation {
+    width: 100%;
+  }
+
+  .calendar-view-button,
+  .calendar-nav-button {
+    flex: 1;
+  }
+
+  .calendar-header h1 {
+    font-size: 1.25rem;
+  }
 }
 
 @media (max-width: 620px) {
@@ -346,9 +367,22 @@
 
   .calendar-day {
     min-height: 86px;
+    padding: 6px;
   }
 
   .calendar-selected-link strong {
     font-size: 13px;
+  }
+
+  .calendar-selected {
+    padding: 10px;
+  }
+
+  .calendar-board {
+    padding: 8px;
+  }
+
+  .calendar-selected-group {
+    padding: 7px;
   }
 }

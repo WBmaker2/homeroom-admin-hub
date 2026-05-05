@@ -1,6 +1,8 @@
 .collections-page {
   display: grid;
   gap: 10px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .collections-section {
@@ -103,12 +105,18 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-panel);
   overflow-x: auto;
+  min-width: 0;
 }
 
 .collections-table {
   width: 100%;
   min-width: 640px;
   border-collapse: collapse;
+}
+
+.collections-table td,
+.collections-table th {
+  min-width: 0;
 }
 
 .collections-table th,
@@ -215,6 +223,10 @@
   min-width: 960px;
 }
 
+.collections-empty {
+  margin: 0;
+}
+
 @media (max-width: 860px) {
   .collections-form-row,
   .collections-toolbar {
@@ -223,5 +235,31 @@
 
   .collections-wide-table {
     min-width: 760px;
+  }
+
+  .collections-form button,
+  .collections-filter-group button {
+    width: 100%;
+  }
+
+  .collections-form {
+    gap: 10px;
+  }
+
+  .collections-message,
+  .collections-inline-alert {
+    width: 100%;
+  }
+
+  .collections-section h2 {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .collections-table th,
+  .collections-table td {
+    font-size: 13px;
+    padding: 6px;
   }
 }

@@ -6,6 +6,83 @@ async function expectNoFileInputs(page: Page) {
   await expect(page.locator('input[type="file"]')).toHaveCount(0)
 }
 
+const RESPONSIVE_ROUTE_CHECKS = [
+  { route: '/app/inbox', heading: /오늘 업무함/ },
+  { route: '/app/tasks', heading: /전체 업무/ },
+  { route: '/app/calendar', heading: /마감 캘린더/ },
+  { route: '/app/templates', heading: '템플릿' },
+  { route: '/app/classes', heading: /학급 명부/ },
+  { route: '/app/collections', heading: /학급 수합판/ },
+  { route: '/app/safety', heading: /데이터 안전/ },
+]
+
+async function expectNoHorizontalOverflow(page: Page) {
+  const metrics = await page.evaluate(() => {
+    const docWidth = Math.ceil(document.documentElement.scrollWidth)
+    const bodyWidth = Math.ceil(document.body.scrollWidth)
+    const viewportWidth = Math.ceil(Math.max(window.innerWidth, document.documentElement.clientWidth))
+    return {
+      docWidth,
+      bodyWidth,
+      viewportWidth,
+    }
+  })
+
+  expect(metrics.docWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
+  expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1)
+}
+
+async function expectBottomNavSpacing(page: Page) {
+  const nav = page.locator('.app-shell-mobile-nav')
+  const navStyles = await page.evaluate(() => {
+    const mobileNav = document.querySelector('.app-shell-mobile-nav') as HTMLElement | null
+    if (!mobileNav) {
+      return null
+    }
+    const isVisible = window.getComputedStyle(mobileNav).display !== 'none'
+    if (!isVisible) {
+      return null
+    }
+    const main = document.querySelector('.app-shell-main') as HTMLElement | null
+    if (!main) {
+      return null
+    }
+
+    return {
+      navHeight: mobileNav.offsetHeight,
+      mainPaddingBottom: parseFloat(getComputedStyle(main).paddingBottom),
+    }
+  })
+
+  if (!navStyles) {
+    return
+  }
+
+  expect(navStyles.mainPaddingBottom).toBeGreaterThanOrEqual(Math.max(0, navStyles.navHeight + 2))
+  await expect(nav).toBeVisible()
+}
+
+async function expectRouteLayout({
+  page,
+  route,
+  heading,
+}: {
+  page: Page
+  route: string
+  heading: RegExp | string
+}) {
+  await page.goto(route)
+  await expect(
+    page.getByRole('heading', {
+      name: heading,
+      exact: typeof heading === 'string',
+    }),
+  ).toBeVisible()
+  await expectNoFileInputs(page)
+  await expectNoHorizontalOverflow(page)
+  await expectBottomNavSpacing(page)
+}
+
 function todayDateInputValue() {
   const today = new Date()
   const year = today.getFullYear()
@@ -153,4 +230,73 @@ test('파일 저장 제외 흐름', async ({ page }) => {
   }
 
   await expect(page.getByText(EXPECTED_STATUS_TEXT)).toBeVisible()
+})
+
+test.describe('모바일/태블릿 반응형 레이아웃 체크', () => {
+  test.use({ viewport: { width: 390, height: 844 } })
+
+  test('쿼리 상세 라우트도 함께 점검', async ({ page }) => {
+    await page.goto('/app/tasks')
+
+    const firstTaskLink = page
+      .locator('article')
+      .first()
+      .locator('a[href^="/app/tasks/"]')
+      .first()
+    await expect(firstTaskLink).toBeVisible()
+
+    const detailHref = await firstTaskLink.getAttribute('href')
+    const taskId = detailHref?.split('/').pop()
+    expect(taskId).not.toBeUndefined()
+
+    await expectRouteLayout({
+      page,
+      route: `/app/tasks?taskId=${taskId}`,
+      heading: /상세/,
+    })
+  })
+
+  for (const route of RESPONSIVE_ROUTE_CHECKS) {
+    test(`공통 오버플로우/하단 여백 확인 ${route.route}`, async ({ page }) => {
+      await expectRouteLayout({
+        page,
+        route: route.route,
+        heading: route.heading,
+      })
+    })
+  }
+})
+
+test.describe('태블릿 폭 레이아웃 체크', () => {
+  test.use({ viewport: { width: 768, height: 1024 } })
+
+  test('오버플로우 점검 쿼리 상세 라우트', async ({ page }) => {
+    await page.goto('/app/tasks')
+
+    const firstTaskLink = page
+      .locator('article')
+      .first()
+      .locator('a[href^="/app/tasks/"]')
+      .first()
+    await expect(firstTaskLink).toBeVisible()
+
+    const detailHref = await firstTaskLink.getAttribute('href')
+    const taskId = detailHref?.split('/').pop()
+    expect(taskId).not.toBeUndefined()
+
+    await expectNoFileInputs(page)
+    await page.goto(`/app/tasks?taskId=${taskId}`)
+    await expect(page.getByRole('heading', { name: /상세/ })).toBeVisible()
+    await expectNoHorizontalOverflow(page)
+  })
+
+  for (const route of RESPONSIVE_ROUTE_CHECKS) {
+    test(`오버플로우 점검 ${route.route}`, async ({ page }) => {
+      await expectRouteLayout({
+        page,
+        route: route.route,
+        heading: route.heading,
+      })
+    })
+  }
 })

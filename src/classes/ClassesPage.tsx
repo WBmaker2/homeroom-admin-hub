@@ -448,24 +448,26 @@ export function ClassesPage() {
             {sortedStudents.length === 0 ? (
               <p className="classes-empty-text">아직 등록된 학생이 없습니다.</p>
             ) : (
-              <table className="classes-table">
-                <thead>
-                  <tr>
-                    <th>번호</th>
-                    <th>이름</th>
-                    <th>표시 이름</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedStudents.map((student) => (
-                    <tr key={`${student.studentNumber}-${student.name}`}>
-                      <td>{student.studentNumber}</td>
-                      <td>{student.name}</td>
-                      <td>{student.displayName}</td>
+              <div className="classes-table-wrap">
+                <table className="classes-table">
+                  <thead>
+                    <tr>
+                      <th>번호</th>
+                      <th>이름</th>
+                      <th>표시 이름</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {sortedStudents.map((student) => (
+                      <tr key={`${student.studentNumber}-${student.name}`}>
+                        <td>{student.studentNumber}</td>
+                        <td>{student.name}</td>
+                        <td>{student.displayName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </section>
         </section>

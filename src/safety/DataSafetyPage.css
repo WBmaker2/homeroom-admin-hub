@@ -2,6 +2,8 @@
   display: grid;
   gap: 12px;
   padding: 10px 14px;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .safety-section {
@@ -40,6 +42,9 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   font-size: 12px;
   resize: vertical;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .safety-textarea--preview {
@@ -94,6 +99,7 @@
   gap: 8px;
   align-items: center;
   font-size: 14px;
+  min-width: 0;
 }
 
 .safety-input {
@@ -133,5 +139,23 @@
   .safety-textarea {
     min-height: 150px;
   }
-}
 
+  .safety-input,
+  .safety-actions button,
+  .safety-section > button,
+  .safety-section button {
+    width: 100%;
+  }
+
+  .safety-actions {
+    align-items: stretch;
+  }
+
+  .safety-actions button {
+    width: 100%;
+  }
+
+  .safety-section h2 {
+    font-size: 18px;
+  }
+}
