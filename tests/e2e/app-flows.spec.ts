@@ -62,6 +62,24 @@ async function expectBottomNavSpacing(page: Page) {
   await expect(nav).toBeVisible()
 }
 
+async function expectTableScroller(page: Page, selector: string) {
+  const scroller = page.locator(selector).first()
+  await expect(scroller).toBeVisible()
+
+  const metrics = await scroller.evaluate((element) => {
+    const styles = window.getComputedStyle(element)
+    return {
+      clientWidth: Math.ceil(element.clientWidth),
+      scrollWidth: Math.ceil(element.scrollWidth),
+      overflowX: styles.overflowX,
+    }
+  })
+
+  expect(['auto', 'scroll']).toContain(metrics.overflowX)
+  expect(metrics.clientWidth).toBeGreaterThan(0)
+  expect(metrics.scrollWidth).toBeGreaterThanOrEqual(metrics.clientWidth)
+}
+
 async function expectRouteLayout({
   page,
   route,
@@ -81,6 +99,18 @@ async function expectRouteLayout({
   await expectNoFileInputs(page)
   await expectNoHorizontalOverflow(page)
   await expectBottomNavSpacing(page)
+}
+
+async function expectResponsiveRouteLayout(page: Page, route: string, heading: RegExp | string) {
+  await expectRouteLayout({ page, route, heading })
+
+  if (route === '/app/classes') {
+    await expectTableScroller(page, '.classes-table-wrap')
+  }
+
+  if (route === '/app/collections') {
+    await expectTableScroller(page, '.collections-table-wrap')
+  }
 }
 
 function todayDateInputValue() {
@@ -258,11 +288,7 @@ test.describe('모바일/태블릿 반응형 레이아웃 체크', () => {
 
   for (const route of RESPONSIVE_ROUTE_CHECKS) {
     test(`공통 오버플로우/하단 여백 확인 ${route.route}`, async ({ page }) => {
-      await expectRouteLayout({
-        page,
-        route: route.route,
-        heading: route.heading,
-      })
+      await expectResponsiveRouteLayout(page, route.route, route.heading)
     })
   }
 })
@@ -292,11 +318,7 @@ test.describe('태블릿 폭 레이아웃 체크', () => {
 
   for (const route of RESPONSIVE_ROUTE_CHECKS) {
     test(`오버플로우 점검 ${route.route}`, async ({ page }) => {
-      await expectRouteLayout({
-        page,
-        route: route.route,
-        heading: route.heading,
-      })
+      await expectResponsiveRouteLayout(page, route.route, route.heading)
     })
   }
 })
