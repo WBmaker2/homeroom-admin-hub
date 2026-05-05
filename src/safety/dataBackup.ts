@@ -24,29 +24,126 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-const hasValidId = (value: unknown): value is { id: string } => {
-  return isObjectRecord(value) && typeof value.id === 'string' && value.id.trim().length > 0
+const isString = (value: unknown): value is string => {
+  return typeof value === 'string'
 }
 
-const validateRecords = (groupName: string, value: unknown, label: string): string | null => {
+const isStringArray = (value: unknown): value is string[] => {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+const isNullableString = (value: unknown): value is string | null => {
+  return value === null || isString(value)
+}
+
+const validateLocationLinkRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    isString(value.type) &&
+    isString(value.title) &&
+    isString(value.value) &&
+    isString(value.memo)
+  )
+}
+
+const validateTaskRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    isString(value.userId) &&
+    isString(value.type) &&
+    isString(value.calendarCategory) &&
+    isString(value.title) &&
+    isNullableString(value.dueDate) &&
+    isString(value.status) &&
+    isString(value.memo) &&
+    isString(value.sourceMemo) &&
+    isString(value.submissionTarget) &&
+    Array.isArray(value.locationLinks) &&
+    value.locationLinks.every(validateLocationLinkRecord) &&
+    isStringArray(value.linkedCollectionIds) &&
+    isString(value.createdAt) &&
+    isString(value.updatedAt)
+  )
+}
+
+const validateClassRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    typeof value.schoolYear === 'number' &&
+    isString(value.schoolLevel) &&
+    isString(value.grade) &&
+    isString(value.className) &&
+    Array.isArray(value.students)
+  )
+}
+
+const validateSubmissionCollectionRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    isString(value.userId) &&
+    isString(value.classId) &&
+    isNullableString(value.officialDocumentTaskId) &&
+    isString(value.taskId) &&
+    isString(value.title) &&
+    isNullableString(value.dueDate) &&
+    isObjectRecord(value.rows) &&
+    isString(value.createdAt) &&
+    isString(value.updatedAt)
+  )
+}
+
+const validateCollectionRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    validateSubmissionCollectionRecord(value.collection) &&
+    Array.isArray(value.students)
+  )
+}
+
+const validateTemplateRecord = (value: unknown): boolean => {
+  return (
+    isObjectRecord(value) &&
+    isString(value.id) &&
+    isString(value.userId) &&
+    isString(value.title) &&
+    isString(value.type) &&
+    isString(value.body) &&
+    isString(value.createdAt) &&
+    isString(value.updatedAt) &&
+    (value.lastUsedAt === null || isString(value.lastUsedAt)) &&
+    isStringArray(value.tags) &&
+    isStringArray(value.replacementKeys)
+  )
+}
+
+const validateRecords = (groupName: string, value: unknown): string | null => {
   if (!Array.isArray(value)) {
     return `${groupName} 그룹이 배열이 아닙니다.`
   }
 
-  const hasInvalidItem = value.some((item) => !hasValidId(item))
+  const hasInvalidItem = value.some((item) => {
+    if (groupName === 'tasks') {
+      return !validateTaskRecord(item)
+    }
+    if (groupName === 'classes') {
+      return !validateClassRecord(item)
+    }
+    if (groupName === 'collections') {
+      return !validateCollectionRecord(item)
+    }
+    if (groupName === 'templates') {
+      return !validateTemplateRecord(item)
+    }
+    return false
+  })
 
   if (hasInvalidItem) {
-    return `${groupName}의 각 항목에 id 문자열이 필요합니다.`
-  }
-
-  if (label === 'templates') {
-    const hasInvalidTemplate = value.some(
-      (item) => !Array.isArray((item as { tags?: unknown }).tags) || !Array.isArray((item as { replacementKeys?: unknown }).replacementKeys),
-    )
-
-    if (hasInvalidTemplate) {
-      return '템플릿 항목은 tags 및 replacementKeys를 배열로 포함해야 합니다.'
-    }
+    return `${groupName}의 각 항목에는 필수 필드가 누락되었습니다.`
   }
 
   return null
@@ -85,7 +182,7 @@ export const parseBackupPayload = (value: string): ParseResult => {
     ]
 
     const errors = groups
-      .map((group) => validateRecords(group, parsed[group], group))
+      .map((group) => validateRecords(group, parsed[group]))
       .filter((error): error is string => Boolean(error))
 
     if (errors.length > 0) {

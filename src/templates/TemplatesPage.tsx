@@ -91,6 +91,7 @@ export function TemplatesPage() {
     createEmptyReplacementValues,
   )
   const [feedback, setFeedback] = useState<TemplateFeedback | null>(null)
+  const [isBusy, setIsBusy] = useState(false)
 
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? null
 
@@ -132,7 +133,9 @@ export function TemplatesPage() {
   }, [intentCreate, selectedTemplateId, templates, userId])
 
   const previewText = templateService.interpolateTemplate(draftTemplate.body, replacementValues)
-  const canCopy = Boolean(selectedTemplate)
+  const isBusyAction = loading || Boolean(error) || isBusy
+  const canSave = !isBusyAction
+  const canCopy = Boolean(selectedTemplate) && !isBusyAction
 
   const patchDraftTemplate = (patch: Partial<TemplateItem>) => {
     setDraftTemplate((current) => ({ ...current, ...patch }))
@@ -161,7 +164,11 @@ export function TemplatesPage() {
     setFeedback(null)
   }
 
-  const handleSaveTemplate = () => {
+  const handleSaveTemplate = async () => {
+    if (!canSave) {
+      return
+    }
+
     const trimmedTitle = draftTemplate.title.trim()
     if (!trimmedTitle) {
       setFeedback({ kind: 'alert', text: '제목을 입력해 주세요.' })
@@ -175,47 +182,54 @@ export function TemplatesPage() {
       updatedAt: now,
     })
 
-    if (isCreateMode || !selectedTemplateId) {
-      const created = {
-        ...normalizedDraft,
-        id: createTemplateId(),
-        userId: userId ?? 'user-demo',
-        createdAt: now,
-        tags: normalizedDraft.tags.filter(Boolean),
-      }
-      setTemplates((current) => [...current, created])
-      setIsCreateMode(false)
-      setSelectedTemplateId(created.id)
-      setDraftTemplate(created)
-      setFeedback({ kind: 'status', text: '템플릿을 저장했습니다.' })
-      return
-    }
+    setIsBusy(true)
 
-    setTemplates((current) =>
-      current.map((template) =>
-        template.id === selectedTemplateId
-          ? {
-              ...normalizedDraft,
-              id: selectedTemplateId,
-              createdAt: template.createdAt,
-            }
-          : template,
-      ),
-    )
-    setDraftTemplate((current) => ({
-      ...normalizedDraft,
-      id: selectedTemplateId,
-      createdAt: current.createdAt,
-    }))
-    setFeedback({ kind: 'status', text: '템플릿을 저장했습니다.' })
+    const selectedTemplateRecord = selectedTemplate
+
+    try {
+      if (isCreateMode || !selectedTemplateId) {
+        const created = {
+          ...normalizedDraft,
+          id: createTemplateId(),
+          userId: userId ?? 'user-demo',
+          createdAt: now,
+          tags: normalizedDraft.tags.filter(Boolean),
+        }
+        await setTemplates((current) => [...current, created])
+        setIsCreateMode(false)
+        setSelectedTemplateId(created.id)
+        setDraftTemplate(created)
+      } else {
+        const nextTemplate: TemplateItem = {
+          ...normalizedDraft,
+          id: selectedTemplateId,
+          createdAt: selectedTemplateRecord?.createdAt ?? normalizedDraft.createdAt,
+        }
+
+        await setTemplates((current) =>
+          current.map((template) =>
+            template.id === selectedTemplateId ? nextTemplate : template,
+          ),
+        )
+        setDraftTemplate(nextTemplate)
+      }
+
+      setFeedback({ kind: 'status', text: '템플릿을 저장했습니다.' })
+    } catch {
+      setFeedback({ kind: 'alert', text: '템플릿 저장에 실패했습니다. 다시 시도해 주세요.' })
+    } finally {
+      setIsBusy(false)
+    }
   }
 
   const handleCopyTemplate = async () => {
-    if (!selectedTemplate) {
-      setFeedback({
-        kind: 'alert',
-        text: '저장된 템플릿을 선택한 뒤 복사해 주세요.',
-      })
+    if (!selectedTemplate || !canCopy) {
+      if (!selectedTemplate) {
+        setFeedback({
+          kind: 'alert',
+          text: '저장된 템플릿을 선택한 뒤 복사해 주세요.',
+        })
+      }
       return
     }
 
@@ -227,11 +241,13 @@ export function TemplatesPage() {
       return
     }
 
+    setIsBusy(true)
+
     try {
       await templateService.writeTextToClipboard(previewText)
       const now = new Date().toISOString()
       const touchedTemplate = templateService.touchTemplateLastUsedAt(selectedTemplate, now)
-      setTemplates((current) =>
+      await setTemplates((current) =>
         current.map((template) =>
           template.id === touchedTemplate.id ? touchedTemplate : template,
         ),
@@ -241,8 +257,10 @@ export function TemplatesPage() {
     } catch {
       setFeedback({
         kind: 'alert',
-        text: '클립보드 복사 중 문제가 발생했습니다. 브라우저 설정을 확인해 주세요.',
+        text: '클립보드 복사 또는 템플릿 저장에 실패했습니다. 다시 시도해 주세요.',
       })
+    } finally {
+      setIsBusy(false)
     }
   }
 
@@ -268,7 +286,12 @@ export function TemplatesPage() {
       <section className="templates-list-section" aria-label="템플릿 목록">
         <div className="templates-list-header">
           <h2>템플릿 목록</h2>
-          <button type="button" className="templates-new-button" onClick={handleCreateTemplate}>
+          <button
+            type="button"
+            className="templates-new-button"
+            onClick={handleCreateTemplate}
+            disabled={isBusyAction}
+          >
             새 템플릿
           </button>
         </div>
@@ -313,6 +336,7 @@ export function TemplatesPage() {
         previewText={previewText}
         feedback={feedback}
         canCopy={canCopy}
+        isBusy={isBusyAction}
         onPatch={patchDraftTemplate}
         onReplacementValueChange={updateReplacementValue}
         onSave={handleSaveTemplate}

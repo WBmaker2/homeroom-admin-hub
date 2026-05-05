@@ -15,7 +15,15 @@ const task: TaskItem = {
   memo: '',
   sourceMemo: '',
   submissionTarget: '',
-  locationLinks: [],
+  locationLinks: [
+    {
+      id: 'loc-1',
+      type: 'URL',
+      title: '업무 링크',
+      value: 'https://example.com/task',
+      memo: '참고 링크',
+    },
+  ],
   linkedCollectionIds: [],
   createdAt: '2026-05-01T10:00:00.000Z',
   updatedAt: '2026-05-01T10:00:00.000Z',
@@ -135,7 +143,7 @@ describe('dataBackup schema helpers', () => {
       JSON.stringify({
         tasks: [{ id: 'task-1', bad: true }, 'oops'],
         classes: [{ id: 'class-1', students: [] }],
-        collections: [{ id: 'collection-1', collection: {}, students: [] }],
+        collections: [{ id: 'collection-1', students: [] }],
         templates: [{ id: 'template-1', title: '안내', body: '', tags: [], replacementKeys: [] }],
       }),
     )
@@ -145,16 +153,16 @@ describe('dataBackup schema helpers', () => {
       return
     }
 
-    expect(parsed.error).toContain('tasks의 각 항목에 id 문자열이 필요합니다.')
+    expect(parsed.error).toContain('tasks의 각 항목에는 필수 필드가 누락되었습니다.')
   })
 
-  it('rejects templates missing tags or replacementKeys', () => {
+  it('rejects id-only malformed records in all groups', () => {
     const parsed = parseBackupPayload(
       JSON.stringify({
-        tasks: [{ id: 'task-1' }],
-        classes: [{ id: 'class-1', students: [] }],
-        collections: [{ id: 'collection-1', collection: {}, students: [] }],
-        templates: [{ id: 'template-1', title: '안내', body: '', tags: [], replacementKeys: 'oops' }],
+        tasks: [{ id: 'task-only' }],
+        classes: [{ id: 'class-only', students: [] }],
+        collections: [{ id: 'collection-only', collection: { id: 'inner-only' }, students: [] }],
+        templates: [{ id: 'template-only' }],
       }),
     )
 
@@ -163,7 +171,10 @@ describe('dataBackup schema helpers', () => {
       return
     }
 
-    expect(parsed.error).toContain('템플릿 항목은 tags 및 replacementKeys를 배열로 포함해야 합니다.')
+    expect(parsed.error).toContain('tasks의 각 항목에는 필수 필드가 누락되었습니다.')
+    expect(parsed.error).toContain('classes의 각 항목에는 필수 필드가 누락되었습니다.')
+    expect(parsed.error).toContain('collections의 각 항목에는 필수 필드가 누락되었습니다.')
+    expect(parsed.error).toContain('templates의 각 항목에는 필수 필드가 누락되었습니다.')
   })
 
   it('builds a date-based backup filename', () => {

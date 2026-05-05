@@ -14,6 +14,7 @@ type TemplateEditorProps = {
   previewText: string
   feedback: TemplateFeedback | null
   canCopy: boolean
+  isBusy: boolean
   onPatch: (patch: Partial<TemplateItem>) => void
   onReplacementValueChange: (key: string, value: string) => void
   onSave: () => void
@@ -32,6 +33,7 @@ export function TemplateEditor({
   previewText,
   feedback,
   canCopy,
+  isBusy,
   onPatch,
   onReplacementValueChange,
   onSave,
@@ -139,10 +141,20 @@ export function TemplateEditor({
         </label>
 
         <div className="template-editor-actions">
-          <button type="button" className="template-editor-save" onClick={onSave}>
+          <button
+            type="button"
+            className="template-editor-save"
+            onClick={onSave}
+            disabled={isBusy}
+          >
             저장
           </button>
-          <button type="button" className="template-editor-copy" onClick={onCopy} disabled={!canCopy}>
+          <button
+            type="button"
+            className="template-editor-copy"
+            onClick={onCopy}
+            disabled={isBusy || !canCopy}
+          >
             미리보기 복사
           </button>
         </div>
